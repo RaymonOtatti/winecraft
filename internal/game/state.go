@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/RaymonOtatti/winecraft/internal/rate"
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
 
@@ -30,8 +31,8 @@ type Player struct {
 	Facing world.Dir
 	Seq    uint32 // last client move sequence applied
 
-	steps bucket // movement rate limit, see Move
-	edits bucket // edit rate limit, see Edit
+	steps rate.Bucket // movement rate limit, see Move
+	edits rate.Bucket // edit rate limit, see Edit
 }
 
 // State is the whole authoritative game.

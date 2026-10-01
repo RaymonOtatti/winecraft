@@ -35,7 +35,7 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 		return Change{}, ErrNotAllowed
 	}
 	// Every attempt costs a token, so a flood of invalid edits is capped too.
-	if !p.edits.take(now, EditInterval, EditBurst, 1) {
+	if !p.edits.Take(now, EditInterval, EditBurst, 1) {
 		return Change{}, ErrRateLimited
 	}
 	if layer >= world.NumLayers {

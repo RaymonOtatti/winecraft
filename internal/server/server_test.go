@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,12 +31,24 @@ func startServer(t *testing.T, webDir string) (*httptest.Server, *Hub) {
 
 func startServerWith(t *testing.T, state *game.State, webDir string) (*httptest.Server, *Hub) {
 	t.Helper()
-	hub := NewHub(state, Config{JoinCode: testCode, Tick: 20 * time.Millisecond})
+	srv, hub, _ := startCfg(t, state, Config{}, webDir)
+	return srv, hub
+}
+
+// startCfg starts a hub with cfg (join code and a fast tick filled in) and
+// returns a function that stops the hub.
+func startCfg(t *testing.T, state *game.State, cfg Config, webDir string) (*httptest.Server, *Hub, context.CancelFunc) {
+	t.Helper()
+	cfg.JoinCode = testCode
+	if cfg.Tick == 0 {
+		cfg.Tick = 20 * time.Millisecond
+	}
+	hub := NewHub(state, cfg)
 	ctx, cancel := context.WithCancel(context.Background())
 	go hub.Run(ctx)
 	srv := httptest.NewServer(Handler(hub, webDir))
 	t.Cleanup(func() { srv.Close(); cancel() })
-	return srv, hub
+	return srv, hub, cancel
 }
 
 type testClient struct {
@@ -346,4 +359,148 @@ func TestEditFloodGetsRateLimited(t *testing.T) {
 		a.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: tiles[i%2]})
 	}
 	a.next("ErrRateLimited", isError(proto.ErrRateLimited))
+}
+
+// closeErr reads until the server closes the connection and returns the
+// read error, or fails the test if it is still open after d.
+func (c *testClient) closeErr(d time.Duration) error {
+	c.t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
+	for {
+		if _, _, err := c.conn.Read(ctx); err != nil {
+			if ctx.Err() != nil {
+				c.t.Fatalf("connection still open after %v", d)
+			}
+			return err
+		}
+	}
+}
+
+func TestNinthPlayerIsTurnedAway(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{MaxPerIP: 16}, t.TempDir())
+	for i := 0; i < 8; i++ {
+		dial(t, srv).join(fmt.Sprintf("p%d", i))
+	}
+	c := dial(t, srv)
+	c.send(&proto.Hello{Version: proto.Version, Name: "ninth", JoinCode: testCode})
+	c.next("ErrServerFull", isError(proto.ErrServerFull))
+}
+
+func TestOversizedFrameClosesTheConnection(t *testing.T) {
+	srv, _ := startServer(t, t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+	big := make([]byte, proto.MaxMessage+1)
+	big[0] = byte(proto.TypePing)
+	c.conn.Write(context.Background(), websocket.MessageBinary, big)
+	if got := websocket.CloseStatus(c.closeErr(2 * time.Second)); got != websocket.StatusMessageTooBig {
+		t.Fatalf("close status %v, want StatusMessageTooBig", got)
+	}
+}
+
+func TestIdleClientIsDroppedButAHeartbeatKeepsItAlive(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{Idle: 300 * time.Millisecond}, t.TempDir())
+	alive := dial(t, srv)
+	wAlive := alive.join("Franco")
+	idle := dial(t, srv)
+	wIdle := idle.join("Raymon")
+
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		tick := time.NewTicker(100 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-tick.C:
+				b, _ := proto.Encode(&proto.Ping{Nonce: 1})
+				alive.conn.Write(context.Background(), websocket.MessageBinary, b)
+			}
+		}
+	}()
+
+	idle.closeErr(2 * time.Second)
+	alive.next("PlayerLeft for the idle player", func(m proto.Msg) bool {
+		pl, ok := m.(*proto.PlayerLeft)
+		return ok && pl.ID == wIdle.ID
+	})
+	time.Sleep(400 * time.Millisecond) // longer than Idle: the heartbeating client must survive
+	alive.send(&proto.Move{Dir: world.East, Seq: 1})
+	alive.next("still connected", func(m proto.Msg) bool {
+		ps, ok := m.(*proto.PlayerState)
+		return ok && ps.ID == wAlive.ID && ps.Seq == 1
+	})
+}
+
+func TestSilentConnectionIsDroppedBeforeHello(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{HelloTimeout: 200 * time.Millisecond}, t.TempDir())
+	dial(t, srv).closeErr(2 * time.Second)
+}
+
+func TestMessageFloodClosesTheConnection(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{MsgInterval: 50 * time.Millisecond, MsgBurst: 20}, t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+	b, _ := proto.Encode(&proto.Ping{Nonce: 1})
+	for i := 0; i < 200; i++ {
+		if c.conn.Write(context.Background(), websocket.MessageBinary, b) != nil {
+			break
+		}
+	}
+	if got := websocket.CloseStatus(c.closeErr(2 * time.Second)); got != websocket.StatusPolicyViolation {
+		t.Fatalf("close status %v, want StatusPolicyViolation", got)
+	}
+}
+
+func TestTooManyConnectionsFromOneIP(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{MaxPerIP: 2}, t.TempDir())
+	dial(t, srv).join("a")
+	dial(t, srv).join("b")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	conn, res, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/ws", nil)
+	if err == nil {
+		conn.CloseNow()
+		t.Fatal("a third connection from the same IP must be refused")
+	}
+	if res == nil || res.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("want HTTP 429, got %v", res)
+	}
+}
+
+func TestJoinCodeGuessingIsLockedOut(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(world.GenerateDevMap(1)), Config{FailBurst: 3, MaxPerIP: 16}, t.TempDir())
+	for i := 0; i < 3; i++ {
+		c := dial(t, srv)
+		c.send(&proto.Hello{Version: proto.Version, Name: "x", JoinCode: fmt.Sprintf("guess-%d", i)})
+		c.next("ErrBadJoinCode", isError(proto.ErrBadJoinCode))
+	}
+	c := dial(t, srv)
+	c.send(&proto.Hello{Version: proto.Version, Name: "x", JoinCode: testCode})
+	c.next("locked out even with the right code", isError(proto.ErrRateLimited))
+}
+
+func TestCrossOriginPageIsRefused(t *testing.T) {
+	srv, _ := startServer(t, t.TempDir())
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	opts := &websocket.DialOptions{HTTPHeader: http.Header{"Origin": {"https://evil.example"}}}
+	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/ws", opts)
+	if err == nil {
+		conn.CloseNow()
+		t.Fatal("a page from another origin must not open a game socket")
+	}
+}
+
+func TestShutdownTellsClientsTheServerIsGoingAway(t *testing.T) {
+	srv, _, stop := startCfg(t, game.New(world.GenerateDevMap(1)), Config{}, t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+	stop()
+	if got := websocket.CloseStatus(c.closeErr(2 * time.Second)); got != websocket.StatusGoingAway {
+		t.Fatalf("close status %v, want StatusGoingAway", got)
+	}
 }

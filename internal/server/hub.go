@@ -19,23 +19,41 @@ import (
 
 // Config tunes a hub. Zero values pick the defaults.
 type Config struct {
-	JoinCode   string
-	Tick       time.Duration // world broadcast interval; default 100 ms (10 Hz)
-	Heartbeat  time.Duration // server Ping interval; default 15 s (Cloudflare drops idle sockets)
-	SendBuffer int           // queued messages per client before it counts as too slow; default 512
-	Log        *slog.Logger
+	JoinCode     string
+	Tick         time.Duration // world broadcast interval; default 100 ms (10 Hz)
+	Heartbeat    time.Duration // server Ping interval; default 15 s (Cloudflare drops idle sockets)
+	Idle         time.Duration // drop a client that sends nothing for this long; default 45 s
+	HelloTimeout time.Duration // time allowed to send Hello after connecting; default 10 s
+	SendBuffer   int           // queued messages per client before it counts as too slow; default 512
+	MaxPerIP     int           // open connections per client IP; default 4
+	MsgInterval  time.Duration // sustained client message rate: one per interval; default 20 ms (50/s)
+	MsgBurst     int           // client message burst; default 100
+	FailInterval time.Duration // a wrong join code is forgiven after this long; default 30 s
+	FailBurst    int           // wrong join codes per IP before a lockout; default 5
+	Log          *slog.Logger
 }
 
 func (c *Config) defaults() {
-	if c.Tick == 0 {
-		c.Tick = 100 * time.Millisecond
+	def := func(d *time.Duration, v time.Duration) {
+		if *d == 0 {
+			*d = v
+		}
 	}
-	if c.Heartbeat == 0 {
-		c.Heartbeat = 15 * time.Second
+	defInt := func(n *int, v int) {
+		if *n == 0 {
+			*n = v
+		}
 	}
-	if c.SendBuffer == 0 {
-		c.SendBuffer = 512
-	}
+	def(&c.Tick, 100*time.Millisecond)
+	def(&c.Heartbeat, 15*time.Second)
+	def(&c.Idle, 45*time.Second)
+	def(&c.HelloTimeout, 10*time.Second)
+	def(&c.MsgInterval, 20*time.Millisecond)
+	def(&c.FailInterval, 30*time.Second)
+	defInt(&c.SendBuffer, 512)
+	defInt(&c.MaxPerIP, 4)
+	defInt(&c.MsgBurst, 100)
+	defInt(&c.FailBurst, 5)
 	if c.Log == nil {
 		c.Log = slog.Default()
 	}
@@ -52,6 +70,7 @@ type Hub struct {
 	done    chan struct{}
 	clients map[uint32]*client
 	online  atomic.Int32
+	gate    *ipGate
 }
 
 type joinReq struct {
@@ -76,6 +95,7 @@ func NewHub(state *game.State, cfg Config) *Hub {
 		inbound: make(chan inbound, 1024),
 		done:    make(chan struct{}),
 		clients: make(map[uint32]*client),
+		gate:    newIPGate(),
 	}
 }
 
@@ -92,7 +112,8 @@ func (h *Hub) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			for _, c := range h.clients {
-				c.conn.Close(websocket.StatusGoingAway, "server shutting down")
+				// Close waits for the peer's reply; don't let one slow client hold up the rest.
+				go c.conn.Close(websocket.StatusGoingAway, "server shutting down")
 			}
 			return
 		case j := <-h.joins:

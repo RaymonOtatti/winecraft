@@ -36,7 +36,7 @@ func (s *State) Move(id uint32, d world.Dir, seq uint32, now time.Time) bool {
 	if step.Hop {
 		cost = 2
 	}
-	if !p.steps.take(now, StepInterval, StepBurst, cost) {
+	if !p.steps.Take(now, StepInterval, StepBurst, cost) {
 		return false
 	}
 	p.Pos = world.Point{X: step.X, Y: step.Y}

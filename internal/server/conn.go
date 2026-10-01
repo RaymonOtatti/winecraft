@@ -12,12 +12,10 @@ import (
 
 	"github.com/RaymonOtatti/winecraft/internal/game"
 	"github.com/RaymonOtatti/winecraft/internal/proto"
+	"github.com/RaymonOtatti/winecraft/internal/rate"
 )
 
-const (
-	helloTimeout = 10 * time.Second
-	writeTimeout = 10 * time.Second
-)
+const writeTimeout = 10 * time.Second
 
 // client is one WebSocket connection. Only the hub sends on send, and only
 // the hub closes it.
@@ -32,14 +30,21 @@ type client struct {
 // serveWS runs one connection: handshake, join, then a reader loop on this
 // goroutine and a writer loop on another.
 func (h *Hub) serveWS(w http.ResponseWriter, r *http.Request) {
+	ip := clientIP(r)
+	if !h.gate.enter(ip, h.cfg.MaxPerIP) {
+		http.Error(w, "too many connections", http.StatusTooManyRequests)
+		return
+	}
+	defer h.gate.leave(ip)
+
 	// Accept's default origin check only allows the page's own host.
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return
 	}
-	conn.SetReadLimit(proto.MaxMessage)
+	conn.SetReadLimit(proto.MaxMessage) // bigger frames close with StatusMessageTooBig
 	ctx := r.Context()
-	c := &client{ip: clientIP(r), conn: conn, send: make(chan []byte, h.cfg.SendBuffer)}
+	c := &client{ip: ip, conn: conn, send: make(chan []byte, h.cfg.SendBuffer)}
 
 	name, code, ok := h.handshake(ctx, c)
 	if !ok {
@@ -72,7 +77,7 @@ func (h *Hub) serveWS(w http.ResponseWriter, r *http.Request) {
 
 // handshake reads the first message, which must be a valid Hello.
 func (h *Hub) handshake(ctx context.Context, c *client) (name string, errCode uint8, ok bool) {
-	hctx, cancel := context.WithTimeout(ctx, helloTimeout)
+	hctx, cancel := context.WithTimeout(ctx, h.cfg.HelloTimeout)
 	defer cancel()
 	typ, b, err := c.conn.Read(hctx)
 	if err != nil || typ != websocket.MessageBinary {
@@ -88,7 +93,11 @@ func (h *Hub) handshake(ctx context.Context, c *client) (name string, errCode ui
 		return "", 0, false
 	case hello.Version != proto.Version:
 		return "", proto.ErrBadVersion, false
+	case h.gate.locked(c.ip, time.Now(), h.cfg.FailInterval, h.cfg.FailBurst):
+		h.cfg.Log.Warn("join locked out after wrong codes", "ip", c.ip)
+		return "", proto.ErrRateLimited, false
 	case subtle.ConstantTimeCompare([]byte(hello.JoinCode), []byte(h.cfg.JoinCode)) != 1:
+		h.gate.fail(c.ip, time.Now(), h.cfg.FailInterval, h.cfg.FailBurst)
 		h.cfg.Log.Warn("bad join code", "ip", c.ip)
 		return "", proto.ErrBadJoinCode, false
 	}
@@ -111,10 +120,21 @@ func reject(ctx context.Context, conn *websocket.Conn, code uint8) {
 	conn.Close(websocket.StatusPolicyViolation, "rejected")
 }
 
+// readLoop forwards decoded messages to the hub. A client that sends
+// nothing for cfg.Idle is dropped (the game client heartbeats well inside
+// that), and one that floods past its message allowance is cut off.
 func (c *client) readLoop(ctx context.Context, h *Hub) {
+	var allowance rate.Bucket
 	for {
-		typ, b, err := c.conn.Read(ctx)
+		rctx, cancel := context.WithTimeout(ctx, h.cfg.Idle)
+		typ, b, err := c.conn.Read(rctx)
+		cancel()
 		if err != nil {
+			return
+		}
+		if !allowance.Take(time.Now(), h.cfg.MsgInterval, h.cfg.MsgBurst, 1) {
+			h.cfg.Log.Warn("message flood", "id", c.id, "ip", c.ip)
+			c.conn.Close(websocket.StatusPolicyViolation, "too many messages")
 			return
 		}
 		if typ != websocket.MessageBinary {
