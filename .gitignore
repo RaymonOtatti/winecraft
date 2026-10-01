@@ -11,3 +11,4 @@ __pycache__/
 *.db-shm
 /snap/
 /web/wasm_exec.js
+/logs/
