@@ -55,6 +55,8 @@ type Game struct {
 	chat    ChatPanel
 	player  [4][2]*ebiten.Image
 	others  []*Remote         // reused each frame for y-sorting remote players
+	hud     *HUDCache         // cached top/help status layer
+	mm      *HUDCache         // cached minimap image
 	w, h    int
 	frame   int
 	snapped bool
@@ -90,7 +92,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH, chat: ChatPanel{}, craft: CraftPanel{}}
+	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH, chat: ChatPanel{}, craft: CraftPanel{}, hud: NewHUDCache(), mm: NewHUDCache()}
 	icons := ebiten.NewImageFromImage(art.Items())
 	for id := 1; id < world.NumItems(); id++ {
 		g.icons[id] = icons.SubImage(art.ItemRect(world.ItemID(id))).(*ebiten.Image)
@@ -443,8 +445,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			g.drawChatPanel(screen)
 		}
 	}
-	g.drawHUD(screen, pads)
-	g.drawMiniMap(screen)
+	g.drawHUDCached(screen, pads)
+	g.drawMiniMapCached(screen)
 	if !panelOpen && (g.ShowDpad || g.Input.TouchSeen()) {
 		drawDpad(screen, pads.Dpad)
 		drawButton(screen, pads.Use, "A")
@@ -494,9 +496,8 @@ func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
 
 var dim = color.NRGBA{0x1b, 0x14, 0x10, 0xc8}
 
-// drawHUD draws the connection status, who is online, the selected tile's
-// name and any notice. Before joining it dims the screen and says why.
-func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
+// drawHUDCached renders the top/status/help layer only when the inputs change.
+func (g *Game) drawHUDCached(screen *ebiten.Image, p Pads) {
 	panelOpen := g.panel.Open || g.craft.Open || g.chat.Open
 	state := Online
 	if g.Net != nil {
@@ -504,35 +505,63 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 	}
 	status := StatusLine(g.S, g.Net != nil, state)
 	if !g.S.Joined {
-		vector.FillRect(screen, 0, 0, float32(g.w), float32(g.h), dim, false)
-		drawText(screen, status, (g.w-6*len(status))/2, g.h/2-8)
+		// The join-screen overlay is cached by the same mechanism.
+		gen := HUDHash("join", status, fmt.Sprint(g.w), fmt.Sprint(g.h))
+		g.hud.Draw(screen, gen, func(dst *ebiten.Image) {
+			vector.FillRect(dst, 0, 0, float32(g.w), float32(g.h), dim, false)
+			drawText(dst, status, (g.w-6*len(status))/2, g.h/2-8)
+		})
 		return
 	}
-	// Top bar: the current goal, across the whole width.
-	goal := GoalLine(g.S)
-	vector.FillRect(screen, 0, 0, float32(g.w), 13, tagBack, false)
-	drawText(screen, goal, (g.w-6*len(goal))/2, 1)
 
-	drawPlate(screen, status, 4, 17)
+	goal := GoalLine(g.S)
+	helpOn := HelpVisible(g.Prefs) && !panelOpen
+	toast := g.toast.Text(time.Now())
+	hbLabel := ""
+	if !panelOpen && len(p.Hotbar) > 0 {
+		hbLabel = HotbarLabel(g.S.Hotbar)
+	}
+	// Build a generation from every HUD text/visibility input.
+	parts := []string{
+		goal, status, toast, hbLabel,
+		fmt.Sprint(g.w), fmt.Sprint(g.h),
+		fmt.Sprint(panelOpen), fmt.Sprint(helpOn),
+		fmt.Sprint(g.Net != nil),
+	}
 	if g.Net != nil {
-		drawPlate(screen, fmt.Sprintf("Uvas: %d", g.S.Inv[world.ItemGrapes]), 4, 29)
-		for i, n := range PlayerList(g.S, g.MyName) {
-			drawPlate(screen, n, g.w-4-6*len(n)-4, 17+i*12)
+		parts = append(parts, fmt.Sprintf("Uvas:%d", g.S.Inv[world.ItemGrapes]))
+		for _, n := range PlayerList(g.S, g.MyName) {
+			parts = append(parts, n)
 		}
 	}
-	if HelpVisible(g.Prefs) && !panelOpen {
-		drawHelp(screen, 4, 47)
-	}
-	if t := g.toast.Text(time.Now()); t != "" {
-		drawPlate(screen, t, (g.w-6*len(t))/2, 33)
-	}
-	if !panelOpen && len(p.Hotbar) > 0 {
-		label := HotbarLabel(g.S.Hotbar)
-		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
-	}
+	gen := HUDHash(parts...)
+	g.hud.Draw(screen, gen, func(dst *ebiten.Image) {
+		// Top bar: the current goal, across the whole width.
+		vector.FillRect(dst, 0, 0, float32(g.w), 13, tagBack, false)
+		drawText(dst, goal, (g.w-6*len(goal))/2, 1)
+
+		drawPlate(dst, status, 4, 17)
+		if g.Net != nil {
+			drawPlate(dst, fmt.Sprintf("Uvas: %d", g.S.Inv[world.ItemGrapes]), 4, 29)
+			for i, n := range PlayerList(g.S, g.MyName) {
+				drawPlate(dst, n, g.w-4-6*len(n)-4, 17+i*12)
+			}
+		}
+		if helpOn {
+			drawHelp(dst, 4, 47)
+		}
+		if toast != "" {
+			drawPlate(dst, toast, (g.w-6*len(toast))/2, 33)
+		}
+		if hbLabel != "" {
+			drawPlate(dst, hbLabel, (g.w-6*len(hbLabel))/2-2, p.Hotbar[0].Min.Y-14)
+		}
+	})
 }
 
-func (g *Game) drawMiniMap(screen *ebiten.Image) {
+// drawMiniMapCached renders the minimap only when the fog or player position
+// changes; otherwise it reuses the cached image.
+func (g *Game) drawMiniMapCached(screen *ebiten.Image) {
 	if !g.S.Joined || g.S.Fog == nil {
 		return
 	}
@@ -546,21 +575,30 @@ func (g *Game) drawMiniMap(screen *ebiten.Image) {
 	margin := 4.0
 	x0 := float64(g.w) - mmW - margin
 	y0 := margin
-	vector.FillRect(screen, float32(x0), float32(y0), float32(mmW), float32(mmH), dim, false)
-	for y := 0; y < bounds.H; y++ {
-		for x := 0; x < bounds.W; x++ {
-			if g.S.Fog.Seen(bounds.X+x, bounds.Y+y) {
-				vector.FillRect(screen,
-					float32(x0+float64(x)*scale), float32(y0+float64(y)*scale),
-					float32(scale), float32(scale), cursorColor, false)
-			}
-		}
-	}
 	px := g.S.Me.Pos.X - bounds.X
 	py := g.S.Me.Pos.Y - bounds.Y
-	vector.FillRect(screen,
-		float32(x0+float64(px)*scale), float32(y0+float64(py)*scale),
-		float32(scale), float32(scale), cursorNo, false)
+	gen := HUDHash(
+		fmt.Sprint(g.w), fmt.Sprint(g.h),
+		fmt.Sprint(bounds.X, bounds.Y, bounds.W, bounds.H),
+		fmt.Sprint(scale),
+		fmt.Sprint(px, py),
+		string(g.S.Fog.Bytes()),
+	)
+	g.mm.Draw(screen, gen, func(dst *ebiten.Image) {
+		vector.FillRect(dst, float32(x0), float32(y0), float32(mmW), float32(mmH), dim, false)
+		for y := 0; y < bounds.H; y++ {
+			for x := 0; x < bounds.W; x++ {
+				if g.S.Fog.Seen(bounds.X+x, bounds.Y+y) {
+					vector.FillRect(dst,
+						float32(x0+float64(x)*scale), float32(y0+float64(y)*scale),
+						float32(scale), float32(scale), cursorColor, false)
+				}
+			}
+		}
+		vector.FillRect(dst,
+			float32(x0+float64(px)*scale), float32(y0+float64(py)*scale),
+			float32(scale), float32(scale), cursorNo, false)
+	})
 }
 
 
