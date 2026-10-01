@@ -16,7 +16,7 @@ Nothing gets pushed to any remote until Franco says so.
 ## B0 — Setup
 - [x] **B0.1** Branch `go-rebuild`; `go mod init github.com/RaymonOtatti/winecraft`; `.gitignore` gets `web/*.wasm`, `bin/`, `data/sources/`, `*.db`. Commit `PLAN.md`, `BUILD.md`, `bench/`. The legacy JS/Python stays untouched.
   *Verify:* `git status` is clean on `go-rebuild`; `go vet ./...` runs.
-- [ ] **B0.2** `Makefile`: `test` (with `-race`), `wasm`, `run`, `share`, `snap` (screenshot).
+- [x] **B0.2** `Makefile`: `test` (with `-race`), `wasm`, `run`, `share`, `snap` (screenshot).
   *Verify:* `make test` is green on an empty module.
 
 ## B1 — World core (`internal/world`, TDD)
@@ -78,3 +78,4 @@ Nothing gets pushed to any remote until Franco says so.
 ## Log
 <!-- one line per finished item: date · item · what was verified (command + result) · commit -->
 - 2026-10-01 · B0.1 · branch `go-rebuild`, `go.mod` (module github.com/RaymonOtatti/winecraft, go 1.26.4), `.gitignore` extended, root `doc.go` · `go vet ./...` exit 0 · see commit
+- 2026-10-01 · B0.2 · `Makefile` with test (-race), vet, fuzz, wasm, size, run, client, snap, share, clean · `make test` exit 0 · see commit
