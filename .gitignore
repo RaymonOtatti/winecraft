@@ -5,7 +5,7 @@ __pycache__/
 # Go rebuild
 /bin/
 /web/*.wasm
-/data/sources/
+/data/
 *.db
 *.db-wal
 *.db-shm
