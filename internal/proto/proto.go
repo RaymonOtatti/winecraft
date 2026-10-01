@@ -18,7 +18,8 @@ import (
 )
 
 // Version is sent in Hello; the server refuses clients on another version.
-const Version uint16 = 1
+// 2: inventory entries are items, not tiles; Interact added.
+const Version uint16 = 2
 
 // Limits. MaxMessage keeps every message far below the 32 KiB default read
 // limit of the browser WebSocket wrapper.
@@ -46,6 +47,7 @@ const (
 	TypeInventory                   // server → client
 	TypePing                        // both ways: game-level heartbeat
 	TypeError                       // server → client
+	TypeInteract                    // client → server: use what is at (X, Y), e.g. harvest a vine
 	numTypes
 )
 
@@ -53,6 +55,7 @@ var names = map[Type]string{
 	TypeHello: "Hello", TypeWelcome: "Welcome", TypeChunk: "Chunk", TypeMove: "Move",
 	TypePlayerState: "PlayerState", TypePlayerLeft: "PlayerLeft", TypeEdit: "Edit",
 	TypeTileUpdate: "TileUpdate", TypeInventory: "Inventory", TypePing: "Ping", TypeError: "Error",
+	TypeInteract: "Interact",
 }
 
 func (t Type) String() string {
@@ -70,6 +73,7 @@ const (
 	ErrBadName
 	ErrRateLimited
 	ErrNotAllowed
+	ErrNoMaterial
 )
 
 // Msg is one protocol message.
@@ -126,13 +130,15 @@ type TileUpdate struct {
 }
 
 type Item struct {
-	Tile  world.TileID
+	ID    world.ItemID
 	Count uint16
 }
 
 type Inventory struct{ Items []Item }
 
 type Ping struct{ Nonce uint32 }
+
+type Interact struct{ X, Y int32 }
 
 type Error struct {
 	Code uint8
@@ -150,6 +156,7 @@ func (*TileUpdate) Type() Type  { return TypeTileUpdate }
 func (*Inventory) Type() Type   { return TypeInventory }
 func (*Ping) Type() Type        { return TypePing }
 func (*Error) Type() Type       { return TypeError }
+func (*Interact) Type() Type    { return TypeInteract }
 
 // Encode serializes m. It fails if a field exceeds its limit.
 func Encode(m Msg) ([]byte, error) {
@@ -197,6 +204,8 @@ func Decode(b []byte) (Msg, error) {
 		m = new(Ping)
 	case TypeError:
 		m = new(Error)
+	case TypeInteract:
+		m = new(Interact)
 	default:
 		return nil, fmt.Errorf("unknown message type %d", b[0])
 	}
@@ -327,7 +336,7 @@ func (m *Inventory) encode(w *writer) {
 	}
 	w.u8(uint8(len(m.Items)))
 	for _, it := range m.Items {
-		w.u16(uint16(it.Tile))
+		w.u16(uint16(it.ID))
 		w.u16(it.Count)
 	}
 }
@@ -339,8 +348,18 @@ func (m *Inventory) decode(r *reader) {
 		return
 	}
 	for i := 0; i < n && r.err == nil; i++ {
-		m.Items = append(m.Items, Item{Tile: r.tile(), Count: r.u16()})
+		m.Items = append(m.Items, Item{ID: r.item(), Count: r.u16()})
 	}
+}
+
+func (m *Interact) encode(w *writer) {
+	w.i32(m.X)
+	w.i32(m.Y)
+}
+
+func (m *Interact) decode(r *reader) {
+	m.X = r.i32()
+	m.Y = r.i32()
 }
 
 func (m *Ping) encode(w *writer) { w.u32(m.Nonce) }
@@ -485,4 +504,12 @@ func (r *reader) tile() world.TileID {
 		r.fail(fmt.Errorf("unknown tile %d", t))
 	}
 	return t
+}
+
+func (r *reader) item() world.ItemID {
+	it := world.ItemID(r.u16())
+	if r.err == nil && int(it) >= world.NumItems() {
+		r.fail(fmt.Errorf("unknown item %d", it))
+	}
+	return it
 }

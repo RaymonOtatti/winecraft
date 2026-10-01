@@ -30,6 +30,7 @@ type Player struct {
 	Pos    world.Point
 	Facing world.Dir
 	Seq    uint32 // last client move sequence applied
+	Inv    map[world.ItemID]int
 
 	steps rate.Bucket // movement rate limit, see Move
 	edits rate.Bucket // edit rate limit, see Edit
@@ -40,9 +41,11 @@ type State struct {
 	Map        *world.DevMap
 	MaxPlayers int
 
-	players map[uint32]*Player
-	dirty   map[uint32]bool
-	nextID  uint32
+	players  map[uint32]*Player
+	dirty    map[uint32]bool
+	invDirty map[uint32]bool
+	regrow   []regrowth
+	nextID   uint32
 }
 
 // New starts an empty game on map m.
@@ -52,6 +55,7 @@ func New(m *world.DevMap) *State {
 		MaxPlayers: 8,
 		players:    make(map[uint32]*Player),
 		dirty:      make(map[uint32]bool),
+		invDirty:   make(map[uint32]bool),
 	}
 }
 
@@ -65,9 +69,13 @@ func (s *State) Join(name string) (*Player, error) {
 		return nil, ErrFull
 	}
 	s.nextID++
-	p := &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South}
+	p := &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int)}
+	for it, n := range StarterKit {
+		p.Inv[it] = n
+	}
 	s.players[p.ID] = p
 	s.dirty[p.ID] = true
+	s.invDirty[p.ID] = true
 	return p, nil
 }
 
@@ -75,6 +83,7 @@ func (s *State) Join(name string) (*Player, error) {
 func (s *State) Leave(id uint32) {
 	delete(s.players, id)
 	delete(s.dirty, id)
+	delete(s.invDirty, id)
 }
 
 // Player returns the player with id, or nil.

@@ -48,10 +48,12 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 	cur := w.At(layer, x, y)
 
 	var result world.TileID
+	var gain, cost world.ItemID
 	if tile == world.None {
 		if cur == world.None || !world.Def(cur).Breakable {
 			return Change{}, ErrNotAllowed
 		}
+		gain, _ = world.ItemForTile(world.Def(cur).Drop)
 		if layer == world.Ground {
 			if w.At(world.Object, x, y) != world.None {
 				return Change{}, ErrNotAllowed // lift what stands on a floor first
@@ -71,6 +73,17 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 			return Change{}, ErrNotAllowed
 		}
 		result = tile
+		var ok bool
+		if cost, ok = world.ItemForTile(tile); !ok || p.Inv[cost] < 1 {
+			return Change{}, ErrNoMaterial
+		}
+	}
+
+	if cost != world.ItemNone {
+		s.give(p, cost, -1)
+	}
+	if gain != world.ItemNone {
+		s.give(p, gain, 1)
 	}
 
 	if result == world.None {

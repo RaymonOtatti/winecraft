@@ -206,15 +206,14 @@ func (g *Game) Update() error {
 	if b.Prev {
 		g.Hotbar.Prev()
 	}
-	for _, act := range []struct {
-		pressed bool
-		a       Action
-	}{{b.A, ActionPlace}, {b.B, ActionBreak}} {
-		if !act.pressed {
-			continue
+	if b.A {
+		if m, ok := g.S.Primary(g.Hotbar.Selected()); ok {
+			g.send(m)
 		}
-		if e, ok := g.S.EditFor(act.a, g.Hotbar.Selected()); ok {
-			g.sendEdit(e)
+	}
+	if b.B {
+		if e, ok := g.S.EditFor(ActionBreak, 0); ok {
+			g.send(e)
 		}
 	}
 	return nil
@@ -227,12 +226,16 @@ func (g *Game) nextScriptStep() {
 	}
 }
 
-// sendEdit sends an edit to the server, whose TileUpdate will change the map.
-// Offline, the edit applies directly, mirroring the server's rule that a
-// broken floor leaves dirt.
-func (g *Game) sendEdit(e *proto.Edit) {
+// send sends an action to the server, whose TileUpdate will change the map.
+// Offline (the dev map, no server), edits apply directly, mirroring the
+// server's rule that a broken floor leaves dirt; harvesting needs a server.
+func (g *Game) send(m proto.Msg) {
 	if g.Net != nil {
-		g.Net.Send(e)
+		g.Net.Send(m)
+		return
+	}
+	e, ok := m.(*proto.Edit)
+	if !ok {
 		return
 	}
 	tile := e.Tile
@@ -330,6 +333,10 @@ func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
 		op.GeoM.Reset()
 		op.GeoM.Translate(float64(r.Min.X+(r.Dx()-art.Tile)/2), float64(r.Min.Y+(r.Dy()-art.Tile)/2))
 		screen.DrawImage(g.tiles[g.Hotbar.Slots[i]], &op)
+		if g.Net != nil {
+			n := fmt.Sprint(g.S.CountFor(g.Hotbar.Slots[i]))
+			ebitenutil.DebugPrintAt(screen, n, r.Max.X-6*len(n)-1, r.Max.Y-14)
+		}
 		if i == g.Hotbar.Index() {
 			vector.StrokeRect(screen, float32(r.Min.X)+1, float32(r.Min.Y)+1, float32(r.Dx())-2, float32(r.Dy())-2, 2, slotPick, false)
 		}
@@ -352,6 +359,9 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 		return
 	}
 	drawPlate(screen, status, 4, 4)
+	if g.Net != nil {
+		drawPlate(screen, fmt.Sprintf("Uvas: %d", g.S.Inv[world.ItemGrapes]), 4, 16)
+	}
 	if g.Net != nil {
 		for i, n := range PlayerList(g.S, g.MyName) {
 			drawPlate(screen, n, g.w-4-6*len(n)-4, 4+i*12)

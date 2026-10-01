@@ -181,23 +181,52 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 		h.state.Move(c.id, m.Dir, m.Seq, time.Now())
 	case *proto.Edit:
 		ch, err := h.state.Edit(c.id, int(m.X), int(m.Y), m.Layer, m.Tile, time.Now())
-		switch {
-		case errors.Is(err, game.ErrRateLimited):
-			h.sendTo(c, &proto.Error{Code: proto.ErrRateLimited})
-		case err != nil:
-			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
-		default:
-			h.broadcast(&proto.TileUpdate{X: int32(ch.X), Y: int32(ch.Y), Layer: ch.Layer, Tile: ch.Tile})
-		}
+		h.reply(c, ch, err)
+	case *proto.Interact:
+		ch, err := h.state.Harvest(c.id, int(m.X), int(m.Y), time.Now())
+		h.reply(c, ch, err)
 	default:
 		// anything else from a client is ignored
 	}
 }
 
-// flush broadcasts every player whose state changed since the last tick.
+// reply broadcasts an accepted world change, or tells the client why not.
+func (h *Hub) reply(c *client, ch game.Change, err error) {
+	switch {
+	case errors.Is(err, game.ErrRateLimited):
+		h.sendTo(c, &proto.Error{Code: proto.ErrRateLimited})
+	case errors.Is(err, game.ErrNoMaterial):
+		h.sendTo(c, &proto.Error{Code: proto.ErrNoMaterial})
+	case err != nil:
+		h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
+	default:
+		h.broadcast(tileUpdate(ch))
+	}
+}
+
+func tileUpdate(ch game.Change) *proto.TileUpdate {
+	return &proto.TileUpdate{X: int32(ch.X), Y: int32(ch.Y), Layer: ch.Layer, Tile: ch.Tile}
+}
+
+// flush runs the world clock (vines regrowing), then broadcasts every player
+// whose state changed and sends each changed inventory to its owner.
 func (h *Hub) flush() {
+	for _, ch := range h.state.Tick(time.Now()) {
+		h.broadcast(tileUpdate(ch))
+	}
 	for _, p := range h.state.TakeDirty() {
 		h.broadcast(playerState(p))
+	}
+	for _, id := range h.state.TakeInventoryChanges() {
+		p, c := h.state.Player(id), h.clients[id]
+		if p == nil || c == nil {
+			continue
+		}
+		inv := &proto.Inventory{}
+		for _, st := range p.Inventory() {
+			inv.Items = append(inv.Items, proto.Item{ID: st.Item, Count: uint16(min(st.Count, 65535))})
+		}
+		h.sendTo(c, inv)
 	}
 }
 

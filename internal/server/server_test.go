@@ -504,3 +504,62 @@ func TestShutdownTellsClientsTheServerIsGoingAway(t *testing.T) {
 		t.Fatalf("close status %v, want StatusGoingAway", got)
 	}
 }
+
+func isInventory(want func(map[world.ItemID]uint16) bool) func(proto.Msg) bool {
+	return func(m proto.Msg) bool {
+		inv, ok := m.(*proto.Inventory)
+		if !ok {
+			return false
+		}
+		have := map[world.ItemID]uint16{}
+		for _, it := range inv.Items {
+			have[it.ID] = it.Count
+		}
+		return want(have)
+	}
+}
+
+func TestJoinSendsTheStarterInventory(t *testing.T) {
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+	c.next("starter inventory", isInventory(func(h map[world.ItemID]uint16) bool {
+		return int(h[world.ItemFence]) == game.StarterKit[world.ItemFence]
+	}))
+}
+
+func TestHarvestOverTheNetwork(t *testing.T) {
+	m := buildMap()
+	m.World.Set(5, 4, world.Vine) // north of spawn (5,5)
+	srv, _ := startServerWith(t, game.New(m), t.TempDir())
+	a := dial(t, srv)
+	a.join("Franco")
+	b := dial(t, srv)
+	b.join("Raymon")
+
+	a.send(&proto.Interact{X: 5, Y: 4})
+	harvested := func(m proto.Msg) bool {
+		u, ok := m.(*proto.TileUpdate)
+		return ok && u.X == 5 && u.Y == 4 && u.Tile == world.VineHarvested
+	}
+	a.next("the vine turns harvested", harvested)
+	b.next("everyone sees it", harvested)
+	a.next("grapes in the inventory", isInventory(func(h map[world.ItemID]uint16) bool {
+		return int(h[world.ItemGrapes]) == game.GrapesPerHarvest
+	}))
+
+	a.send(&proto.Interact{X: 5, Y: 4})
+	a.next("no double harvest", isError(proto.ErrNotAllowed))
+}
+
+func TestBuildingWithoutMaterialIsRefused(t *testing.T) {
+	saved := game.StarterKit[world.ItemCrate]
+	game.StarterKit[world.ItemCrate] = 0 // this player starts without crates
+	t.Cleanup(func() { game.StarterKit[world.ItemCrate] = saved })
+
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+	c.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: world.Crate})
+	c.next("ErrNoMaterial", isError(proto.ErrNoMaterial))
+}

@@ -20,14 +20,15 @@ type Session struct {
 	Bounds    world.Rect
 	Sandbox   world.Rect
 	Players   map[uint32]*Remote
-	Notice    string // the last server error, for the HUD
-	NoticeSeq int    // bumps on every error, so the same message can toast twice
+	Inv       map[world.ItemID]int // what the server says we carry
+	Notice    string               // the last server error, for the HUD
+	NoticeSeq int                  // bumps on every error, so the same message can toast twice
 }
 
 // NewSession starts empty, waiting for a Welcome.
 func NewSession() *Session {
 	w := world.New()
-	return &Session{World: w, Me: NewWalker(w, world.Point{}), Players: make(map[uint32]*Remote)}
+	return &Session{World: w, Me: NewWalker(w, world.Point{}), Players: make(map[uint32]*Remote), Inv: make(map[world.ItemID]int)}
 }
 
 var errorText = map[uint8]string{
@@ -37,6 +38,7 @@ var errorText = map[uint8]string{
 	proto.ErrBadName:     "Nombre no válido",
 	proto.ErrRateLimited: "Más despacio",
 	proto.ErrNotAllowed:  "No se puede ahí",
+	proto.ErrNoMaterial:  "Te faltan materiales",
 }
 
 // Apply updates the session with one server message.
@@ -71,6 +73,11 @@ func (s *Session) Apply(m proto.Msg) {
 		} else {
 			s.World.Set(int(m.X), int(m.Y), m.Tile)
 		}
+	case *proto.Inventory:
+		clear(s.Inv)
+		for _, it := range m.Items {
+			s.Inv[it.ID] = int(it.Count)
+		}
 	case *proto.Error:
 		s.NoticeSeq++
 		s.Notice = errorText[m.Code]
@@ -78,6 +85,12 @@ func (s *Session) Apply(m proto.Msg) {
 			s.Notice = "Error del servidor"
 		}
 	}
+}
+
+// notify shows a message locally, the way server errors are shown.
+func (s *Session) notify(text string) {
+	s.NoticeSeq++
+	s.Notice = text
 }
 
 // Tick advances the other players' walking animations.

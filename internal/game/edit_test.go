@@ -11,7 +11,7 @@ import (
 // sits on its east edge.
 //
 //	y=4  . . . . . R | . . .     R rock (breakable)
-//	y=5  . . . . . @ | . . .     @ spawn; (6,5) is outside the sandbox
+//	y=5  . . . . . @ | V . .     @ spawn; V a vine at (6,5), outside the sandbox
 //	y=6  . . . . . P | . . .     P poplar (not breakable)
 func editMap() *world.DevMap {
 	w := world.New()
@@ -22,6 +22,8 @@ func editMap() *world.DevMap {
 	}
 	w.Set(5, 4, world.Rock)
 	w.Set(5, 6, world.Poplar)
+	w.Set(6, 5, world.Dirt)
+	w.Set(6, 5, world.Vine) // outside the sandbox: harvesting works anywhere
 	return &world.DevMap{
 		World:   w,
 		Bounds:  world.Rect{W: 10, H: 10},

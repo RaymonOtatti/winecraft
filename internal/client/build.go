@@ -79,3 +79,33 @@ func (s *Session) EditFor(a Action, tile world.TileID) (*proto.Edit, bool) {
 	}
 	return e, true
 }
+
+// CountFor is how many of the item that places tile we carry.
+func (s *Session) CountFor(tile world.TileID) int {
+	it, ok := world.ItemForTile(tile)
+	if !ok {
+		return 0
+	}
+	return s.Inv[it]
+}
+
+// Primary is the A button: harvest the vine you face, otherwise place the
+// selected tile. Without the material it tells the player and sends nothing.
+func (s *Session) Primary(tile world.TileID) (proto.Msg, bool) {
+	p := s.Target()
+	if !s.Joined || s.Me.Moving() {
+		return nil, false
+	}
+	if s.World.At(world.Object, p.X, p.Y) == world.Vine {
+		return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
+	}
+	e, ok := s.EditFor(ActionPlace, tile)
+	if !ok {
+		return nil, false
+	}
+	if s.CountFor(tile) < 1 {
+		s.notify(errorText[proto.ErrNoMaterial])
+		return nil, false
+	}
+	return e, true
+}
