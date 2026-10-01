@@ -2,7 +2,11 @@
 
 package main
 
-import "syscall/js"
+import (
+	"syscall/js"
+
+	"github.com/RaymonOtatti/winecraft/internal/client"
+)
 
 // defaults reads the browser page: the game server is the page's own host,
 // and the join form (index.html) leaves the name and code in WINECRAFT_JOIN.
@@ -32,3 +36,23 @@ func defaults() startup {
 
 // deviceToken: in the browser the page made the token (localStorage).
 func deviceToken() string { return "" }
+
+// prefs keeps settings in localStorage; if storage is blocked (private
+// mode), they last for this visit only.
+type prefs struct{ mem client.MemPrefs }
+
+func newPrefs() client.Prefs { return prefs{mem: client.MemPrefs{}} }
+
+func (p prefs) Get(k string) string {
+	defer func() { recover() }() // a storage access can throw
+	if v := js.Global().Get("localStorage").Call("getItem", "winecraft."+k); !v.IsNull() {
+		return v.String()
+	}
+	return p.mem.Get(k)
+}
+
+func (p prefs) Set(k, v string) {
+	p.mem.Set(k, v)
+	defer func() { recover() }()
+	js.Global().Get("localStorage").Call("setItem", "winecraft."+k, v)
+}

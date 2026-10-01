@@ -85,7 +85,8 @@ func NewPads(w, h, n int) Pads {
 // Buttons is what was pressed this frame (besides walking).
 type Buttons struct {
 	Use, Build, Break bool
-	Slot              int // hotbar slot picked directly, or -1
+	Help              bool // toggle the command side bar
+	Slot              int  // hotbar slot picked directly, or -1
 	Next, Prev        bool
 }
 
@@ -123,6 +124,7 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	b.Use = anyJustPressed(keysUse)
 	b.Build = anyJustPressed(keysBuild)
 	b.Break = anyJustPressed(keysBreak)
+	b.Help = inpututil.IsKeyJustPressed(ebiten.KeyH)
 	for i, k := range keysSlot {
 		if inpututil.IsKeyJustPressed(k) {
 			b.Slot = i

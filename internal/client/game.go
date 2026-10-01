@@ -31,6 +31,7 @@ type Game struct {
 	Input  Input
 	Hotbar *Hotbar
 	MyName string
+	Prefs  Prefs // per-device settings; NewGame starts with memory-only
 
 	// SnapPath, when set, saves frame SnapFrame as a PNG and quits.
 	SnapPath  string
@@ -82,7 +83,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, Hotbar: NewHotbar(), SnapFrame: 30, w: BaseW, h: BaseH}
+	g := &Game{S: s, Net: n, Hotbar: NewHotbar(), Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH}
 	atlas := ebiten.NewImageFromImage(art.Atlas())
 	for id := 1; id < world.NumTiles(); id++ {
 		g.tiles[id] = atlas.SubImage(art.TileRect(world.TileID(id))).(*ebiten.Image)
@@ -210,6 +211,9 @@ func (g *Game) Update() error {
 	}
 
 	b := g.Input.PollButtons(pads)
+	if b.Help {
+		SetHelpVisible(g.Prefs, !HelpVisible(g.Prefs))
+	}
 	g.Hotbar.Select(b.Slot)
 	if b.Next {
 		g.Hotbar.Next()
@@ -379,21 +383,40 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 		drawText(screen, status, (g.w-6*len(status))/2, g.h/2-8)
 		return
 	}
-	drawPlate(screen, status, 4, 4)
+	// Top bar: the current goal, across the whole width.
+	goal := GoalLine(g.S)
+	vector.FillRect(screen, 0, 0, float32(g.w), 13, tagBack, false)
+	drawText(screen, goal, (g.w-6*len(goal))/2, 1)
+
+	drawPlate(screen, status, 4, 17)
 	if g.Net != nil {
-		drawPlate(screen, fmt.Sprintf("Uvas: %d", g.S.Inv[world.ItemGrapes]), 4, 16)
-	}
-	if g.Net != nil {
+		drawPlate(screen, fmt.Sprintf("Uvas: %d", g.S.Inv[world.ItemGrapes]), 4, 29)
 		for i, n := range PlayerList(g.S, g.MyName) {
-			drawPlate(screen, n, g.w-4-6*len(n)-4, 4+i*12)
+			drawPlate(screen, n, g.w-4-6*len(n)-4, 17+i*12)
 		}
 	}
+	if HelpVisible(g.Prefs) {
+		drawHelp(screen, 4, 47)
+	}
 	if t := g.toast.Text(time.Now()); t != "" {
-		drawPlate(screen, t, (g.w-6*len(t))/2, 20)
+		drawPlate(screen, t, (g.w-6*len(t))/2, 33)
 	}
 	if len(p.Hotbar) > 0 {
 		label := HotbarLabel(g.Hotbar)
 		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
+	}
+}
+
+// drawHelp draws the command side bar with its top-left at (x, y).
+func drawHelp(screen *ebiten.Image, x, y int) {
+	lines := HelpLines()
+	w := 0
+	for _, l := range lines {
+		w = max(w, 6*len(l))
+	}
+	vector.FillRect(screen, float32(x), float32(y), float32(w+8), float32(12*len(lines)+4), tagBack, false)
+	for i, l := range lines {
+		drawText(screen, l, x+4, y+2+12*i)
 	}
 }
 

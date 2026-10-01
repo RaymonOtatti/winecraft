@@ -53,6 +53,9 @@ func main() {
 	}
 	g.SnapPath = *snap
 	g.ShowDpad = *touch
+	if *snap == "" { // snapshots stay independent of this machine's settings
+		g.Prefs = newPrefs()
+	}
 	g.Stay = *stay
 	g.Bench = *bench
 	if *walk != "" {
