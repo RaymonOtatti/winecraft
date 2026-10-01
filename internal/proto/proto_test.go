@@ -22,7 +22,7 @@ func sampleChunk() *Chunk {
 func samples() []Msg {
 	return []Msg{
 		&Hello{Version: Version, Name: "Raymon", JoinCode: "malbec-42", Token: "tok_abc123"},
-		&Welcome{ID: 7, X: 47, Y: 47, Bounds: world.Rect{X: 0, Y: 0, W: 96, H: 96}, Sandbox: world.Rect{X: 10, Y: 77, W: 24, H: 13}},
+		&Welcome{ID: 7, X: 47, Y: 47, Bounds: world.Rect{X: 0, Y: 0, W: 96, H: 96}, BuildZone: world.Rect{X: 10, Y: 77, W: 24, H: 13}},
 		sampleChunk(),
 		&Move{Dir: world.East, Seq: 1234},
 		&PlayerState{ID: 7, X: -5, Y: 99, Facing: world.North, Seq: 1234, Name: "Franco"},

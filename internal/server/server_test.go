@@ -310,7 +310,7 @@ func TestSpeedHackOverTheNetworkIsCapped(t *testing.T) {
 	}
 }
 
-// buildMap: grass everywhere, spawn (5,5) inside a sandbox covering x<6.
+// buildMap: grass everywhere, spawn (5,5) inside a build zone covering x<6.
 func buildMap() *world.DevMap {
 	w := world.New()
 	for y := 0; y < 10; y++ {
@@ -319,7 +319,7 @@ func buildMap() *world.DevMap {
 		}
 	}
 	return &world.DevMap{World: w, Bounds: world.Rect{W: 10, H: 10}, Spawn: world.Point{X: 5, Y: 5},
-		Sandbox: world.Rect{W: 6, H: 10}}
+		BuildZone: world.Rect{W: 6, H: 10}}
 }
 
 func isError(code uint8) func(proto.Msg) bool {
@@ -343,7 +343,7 @@ func TestEditsReachEveryone(t *testing.T) {
 	b.next("B sees A's fence", want)
 }
 
-func TestEditOutsideTheSandboxIsRefused(t *testing.T) {
+func TestEditOutsideTheBuildZoneIsRefused(t *testing.T) {
 	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
 	a := dial(t, srv)
 	a.join("Franco")

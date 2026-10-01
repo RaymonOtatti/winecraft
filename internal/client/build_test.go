@@ -37,11 +37,11 @@ func TestHotbarHoldsThePlaceableTiles(t *testing.T) {
 	}
 }
 
-// builder: a welcomed session at (5,5) facing east, sandbox x<8.
+// builder: a welcomed session at (5,5) facing east, build zone x<8.
 func builder(t *testing.T) *Session {
 	t.Helper()
 	s := welcomed(t)
-	s.Sandbox = world.Rect{W: 8, H: 10}
+	s.BuildZone = world.Rect{W: 8, H: 10}
 	s.Me.Facing = world.East
 	return s
 }
@@ -74,12 +74,12 @@ func TestBreakPicksTheObjectFirstThenTheFloor(t *testing.T) {
 	}
 }
 
-func TestNoEditsOutsideTheSandboxOrMidStep(t *testing.T) {
+func TestNoEditsOutsideTheBuildZoneOrMidStep(t *testing.T) {
 	s := builder(t)
 	s.Me.Reset(world.Point{X: 7, Y: 5}) // facing east → target (8,5), outside
 	s.Me.Facing = world.East
 	if _, ok := s.EditFor(ActionBuild, world.Fence); ok {
-		t.Fatal("must not send edits for tiles outside the sandbox")
+		t.Fatal("must not send edits for tiles outside the build zone")
 	}
 	s.Me.Reset(world.Point{X: 5, Y: 5})
 	s.Me.Facing = world.West

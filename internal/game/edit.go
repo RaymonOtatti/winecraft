@@ -26,9 +26,9 @@ type Change struct {
 }
 
 // Edit places tile on layer at (x, y), or breaks what is there when tile is
-// None. Players may only edit inside the sandbox, on a tile directly next to
-// them. Breaking a floor leaves dirt, never a hole. The real world outside
-// the sandbox is read-only (PLAN.md §5).
+// None. Players may only edit inside the build zone (the central valley), on
+// a tile directly next to them, and only build on open soil. Breaking a floor
+// leaves dirt, never a hole.
 func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, now time.Time) (Change, error) {
 	p := s.players[id]
 	if p == nil {
@@ -41,7 +41,7 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 	if layer >= world.NumLayers {
 		return Change{}, ErrNotAllowed
 	}
-	if !s.Map.Sandbox.Contains(x, y) || manhattan(p.Pos, world.Point{X: x, Y: y}) != 1 {
+	if !s.Map.BuildZone.Contains(x, y) || manhattan(p.Pos, world.Point{X: x, Y: y}) != 1 {
 		return Change{}, ErrNotAllowed
 	}
 	w := s.Map.World
@@ -65,11 +65,12 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 		if !def.Placeable || def.Layer != layer {
 			return Change{}, ErrNotAllowed
 		}
-		if layer == world.Object {
-			if cur != world.None || !world.Def(w.At(world.Ground, x, y)).Walkable || s.occupied(x, y) {
-				return Change{}, ErrNotAllowed
-			}
-		} else if !isSoil(cur) || w.At(world.Object, x, y) != world.None {
+		// Everything is built on open soil: roads, water, bridges, the plaza and
+		// planted ground stay as they are.
+		if !isSoil(w.At(world.Ground, x, y)) || w.At(world.Object, x, y) != world.None {
+			return Change{}, ErrNotAllowed
+		}
+		if layer == world.Object && s.occupied(x, y) {
 			return Change{}, ErrNotAllowed
 		}
 		result = tile

@@ -76,7 +76,7 @@ type scriptStep struct {
 func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 	s := NewSession()
 	s.World, s.Me = m.World, NewWalker(m.World, pos)
-	s.Bounds, s.Sandbox, s.Joined = m.Bounds, m.Sandbox, true
+	s.Bounds, s.BuildZone, s.Joined = m.Bounds, m.BuildZone, true
 	return s
 }
 

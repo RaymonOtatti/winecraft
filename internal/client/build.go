@@ -50,7 +50,7 @@ func (s *Session) Target() world.Point {
 }
 
 // inZone reports whether p is somewhere players may build.
-func (s *Session) inZone(p world.Point) bool { return s.Sandbox.Contains(p.X, p.Y) }
+func (s *Session) inZone(p world.Point) bool { return s.BuildZone.Contains(p.X, p.Y) }
 
 // openGround reports whether something can be built on p: bare soil with
 // nothing standing on it.
@@ -67,7 +67,7 @@ func (s *Session) CanBuildAt(p world.Point) bool {
 }
 
 // EditFor turns a button press into the Edit to send, or false when there is
-// clearly nothing to do (outside the sandbox, mid-step, nothing to break), to
+// clearly nothing to do (outside the build zone, mid-step, nothing to break), to
 // save the server's message budget. Breaking takes what stands on the tile
 // first, then a floor.
 func (s *Session) EditFor(a Action, tile world.TileID) (*proto.Edit, bool) {

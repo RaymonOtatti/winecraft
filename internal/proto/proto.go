@@ -91,10 +91,10 @@ type Hello struct {
 }
 
 type Welcome struct {
-	ID      uint32
-	X, Y    int32
-	Bounds  world.Rect
-	Sandbox world.Rect
+	ID        uint32
+	X, Y      int32
+	Bounds    world.Rect
+	BuildZone world.Rect
 }
 
 type Chunk struct {
@@ -239,7 +239,7 @@ func (m *Welcome) encode(w *writer) {
 	w.i32(m.X)
 	w.i32(m.Y)
 	w.rect(m.Bounds)
-	w.rect(m.Sandbox)
+	w.rect(m.BuildZone)
 }
 
 func (m *Welcome) decode(r *reader) {
@@ -247,7 +247,7 @@ func (m *Welcome) decode(r *reader) {
 	m.X = r.i32()
 	m.Y = r.i32()
 	m.Bounds = r.rect()
-	m.Sandbox = r.rect()
+	m.BuildZone = r.rect()
 }
 
 func (m *Chunk) encode(w *writer) {

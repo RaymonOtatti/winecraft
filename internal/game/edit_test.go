@@ -7,11 +7,11 @@ import (
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
 
-// editMap: grass on [0,10)², the sandbox is the west part x<6, spawn (5,5)
+// editMap: grass on [0,10)², the build zone is the west part x<6, spawn (5,5)
 // sits on its east edge.
 //
 //	y=4  . . . . . R | . . .     R rock (breakable)
-//	y=5  . . . . . @ | V . .     @ spawn; V a vine at (6,5), outside the sandbox
+//	y=5  . . . . . @ | V . .     @ spawn; V a vine at (6,5), outside the build zone
 //	y=6  . . . . . P | . . .     P poplar (not breakable)
 func editMap() *world.DevMap {
 	w := world.New()
@@ -23,12 +23,12 @@ func editMap() *world.DevMap {
 	w.Set(5, 4, world.Rock)
 	w.Set(5, 6, world.Poplar)
 	w.Set(6, 5, world.Dirt)
-	w.Set(6, 5, world.Vine) // outside the sandbox: harvesting works anywhere
+	w.Set(6, 5, world.Vine) // outside the build zone: harvesting works anywhere
 	return &world.DevMap{
-		World:   w,
-		Bounds:  world.Rect{W: 10, H: 10},
-		Spawn:   world.Point{X: 5, Y: 5},
-		Sandbox: world.Rect{X: 0, Y: 0, W: 6, H: 10},
+		World:     w,
+		Bounds:    world.Rect{W: 10, H: 10},
+		Spawn:     world.Point{X: 5, Y: 5},
+		BuildZone: world.Rect{X: 0, Y: 0, W: 6, H: 10},
 	}
 }
 
@@ -42,11 +42,11 @@ func editor(t *testing.T) (*State, *Player) {
 	return s, p
 }
 
-func TestPlaceAndBreakInsideTheSandbox(t *testing.T) {
+func TestPlaceAndBreakInsideTheBuildZone(t *testing.T) {
 	s, p := editor(t)
 	ch, err := s.Edit(p.ID, 4, 5, world.Object, world.Fence, t0)
 	if err != nil {
-		t.Fatalf("placing a fence next to you in the sandbox: %v", err)
+		t.Fatalf("placing a fence next to you in the build zone: %v", err)
 	}
 	if ch != (Change{X: 4, Y: 5, Layer: world.Object, Tile: world.Fence}) || s.Map.World.At(world.Object, 4, 5) != world.Fence {
 		t.Fatalf("change %+v, world has %d", ch, s.Map.World.At(world.Object, 4, 5))
@@ -86,7 +86,7 @@ func TestEditsThatAreNotAllowed(t *testing.T) {
 		layer world.Layer
 		tile  world.TileID
 	}{
-		{"outside the sandbox", 6, 5, world.Object, world.Fence},
+		{"outside the build zone", 6, 5, world.Object, world.Fence},
 		{"out of reach", 3, 5, world.Object, world.Fence},
 		{"on your own tile", 5, 5, world.Object, world.Fence},
 		{"onto an occupied tile", 5, 4, world.Object, world.Fence},
@@ -141,5 +141,20 @@ func TestEditByUnknownPlayer(t *testing.T) {
 	s, _ := editor(t)
 	if _, err := s.Edit(999, 4, 5, world.Object, world.Fence, t0); !errors.Is(err, ErrNotAllowed) {
 		t.Fatalf("err = %v, want ErrNotAllowed", err)
+	}
+}
+
+func TestNothingIsBuiltOnRoadsWaterThePlazaOrBridges(t *testing.T) {
+	for _, ground := range []world.TileID{world.Road, world.Water, world.Plaza, world.Bridge} {
+		s, p := editor(t)
+		s.Map.World.Set(4, 5, ground)
+		for _, tile := range []world.TileID{world.Fence, world.Planks} {
+			if _, err := s.Edit(p.ID, 4, 5, world.Def(tile).Layer, tile, t0); !errors.Is(err, ErrNotAllowed) {
+				t.Errorf("%s on %s: err = %v, want ErrNotAllowed", world.Def(tile).Name, world.Def(ground).Name, err)
+			}
+		}
+		if s.Map.World.At(world.Ground, 4, 5) != ground || s.Map.World.At(world.Object, 4, 5) != world.None {
+			t.Errorf("the %s tile changed", world.Def(ground).Name)
+		}
 	}
 }

@@ -17,10 +17,10 @@ func (r Rect) Contains(x, y int) bool {
 // (PLAN.md Phase 2) exists. Its layout is invented and makes no claim about
 // any real place.
 type DevMap struct {
-	World   *World
-	Bounds  Rect
-	Spawn   Point
-	Sandbox Rect // the fenced zone where players may break and place tiles
+	World     *World
+	Bounds    Rect
+	Spawn     Point
+	BuildZone Rect // where players may build: the whole valley inside the border
 }
 
 const devSize = 96
@@ -32,9 +32,9 @@ func GenerateDevMap(seed uint64) *DevMap {
 	w := New()
 	rng := rand.New(rand.NewPCG(seed, 0x5eed_c0de))
 	m := &DevMap{
-		World:   w,
-		Bounds:  Rect{0, 0, devSize, devSize},
-		Sandbox: Rect{10, 77, 24, 13},
+		World:     w,
+		Bounds:    Rect{0, 0, devSize, devSize},
+		BuildZone: Rect{1, 1, devSize - 2, devSize - 2},
 	}
 
 	// Base ground: grass with seeded patches of dirt and sand.
@@ -101,9 +101,9 @@ func GenerateDevMap(seed uint64) *DevMap {
 	}
 	m.Spawn = Point{47, 47}
 
-	// The fenced sandbox build zone, with a gate on its east side and a lane
-	// to the main road.
-	sb := m.Sandbox
+	// A fenced yard with a gate on its east side and a lane to the main road
+	// (it was the only build zone in the first test; now it is just a place).
+	sb := Rect{10, 77, 24, 13}
 	for y := sb.Y - 1; y <= sb.Y+sb.H; y++ {
 		for x := sb.X - 1; x <= sb.X+sb.W; x++ {
 			w.Set(x, y, Dirt)
@@ -118,7 +118,7 @@ func GenerateDevMap(seed uint64) *DevMap {
 	for x := sb.X + sb.W; x < 46; x++ {
 		w.Set(x, gateY, Road)
 	}
-	// rocks inside the sandbox to break for stone
+	// rocks inside the yard to break for stone
 	for i := 0; i < 6; i++ {
 		w.Set(sb.X+2+rng.IntN(sb.W-4), sb.Y+2+rng.IntN(sb.H-4), Rock)
 	}

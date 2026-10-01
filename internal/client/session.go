@@ -18,7 +18,7 @@ type Session struct {
 	MyID      uint32
 	Joined    bool
 	Bounds    world.Rect
-	Sandbox   world.Rect
+	BuildZone world.Rect
 	Players   map[uint32]*Remote
 	Inv       map[world.ItemID]int // what the server says we carry
 	Notice    string               // the last server error, for the HUD
@@ -46,7 +46,7 @@ func (s *Session) Apply(m proto.Msg) {
 	switch m := m.(type) {
 	case *proto.Welcome:
 		s.MyID, s.Joined = m.ID, true
-		s.Bounds, s.Sandbox = m.Bounds, m.Sandbox
+		s.Bounds, s.BuildZone = m.Bounds, m.BuildZone
 		s.Me.Reset(world.Point{X: int(m.X), Y: int(m.Y)})
 		clear(s.Players)
 		s.Notice = ""

@@ -189,7 +189,7 @@ func (h *Hub) join(c *client, name, token string) error {
 	h.online.Store(int32(len(h.clients)))
 
 	m := h.state.Map
-	h.sendTo(c, &proto.Welcome{ID: p.ID, X: int32(p.Pos.X), Y: int32(p.Pos.Y), Bounds: m.Bounds, Sandbox: m.Sandbox})
+	h.sendTo(c, &proto.Welcome{ID: p.ID, X: int32(p.Pos.X), Y: int32(p.Pos.Y), Bounds: m.Bounds, BuildZone: m.BuildZone})
 	lo, _, _ := world.ChunkOf(m.Bounds.X, m.Bounds.Y)
 	hi, _, _ := world.ChunkOf(m.Bounds.X+m.Bounds.W-1, m.Bounds.Y+m.Bounds.H-1)
 	for cy := lo.Y; cy <= hi.Y; cy++ {

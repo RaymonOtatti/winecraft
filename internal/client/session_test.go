@@ -10,7 +10,7 @@ import (
 func welcomed(t *testing.T) *Session {
 	t.Helper()
 	s := NewSession()
-	s.Apply(&proto.Welcome{ID: 7, X: 5, Y: 5, Bounds: world.Rect{W: 10, H: 10}, Sandbox: world.Rect{W: 6, H: 10}})
+	s.Apply(&proto.Welcome{ID: 7, X: 5, Y: 5, Bounds: world.Rect{W: 10, H: 10}, BuildZone: world.Rect{W: 6, H: 10}})
 	ch := &proto.Chunk{}
 	for i := range ch.Layers[world.Ground] {
 		ch.Layers[world.Ground][i] = world.Grass
@@ -24,8 +24,8 @@ func TestWelcomeJoinsAtTheServersPosition(t *testing.T) {
 	if !s.Joined || s.MyID != 7 || s.Me.Pos != (world.Point{X: 5, Y: 5}) {
 		t.Fatalf("after Welcome: joined %v id %d pos %v", s.Joined, s.MyID, s.Me.Pos)
 	}
-	if s.Sandbox != (world.Rect{W: 6, H: 10}) {
-		t.Fatalf("sandbox %v not taken from Welcome", s.Sandbox)
+	if s.BuildZone != (world.Rect{W: 6, H: 10}) {
+		t.Fatalf("build zone %v not taken from Welcome", s.BuildZone)
 	}
 }
 

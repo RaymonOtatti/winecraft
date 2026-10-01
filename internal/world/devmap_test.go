@@ -27,15 +27,15 @@ func TestDevMapKeyPlacesAreReachableFromSpawn(t *testing.T) {
 	m := GenerateDevMap(1)
 	reach := reachable(m.World, m.Spawn, m.Bounds)
 
-	inSandbox := false
+	inBuildZone := false
 	for p := range reach {
-		if m.Sandbox.Contains(p.X, p.Y) {
-			inSandbox = true
+		if m.BuildZone.Contains(p.X, p.Y) {
+			inBuildZone = true
 			break
 		}
 	}
-	if !inSandbox {
-		t.Fatal("the sandbox build zone must be reachable from spawn")
+	if !inBuildZone {
+		t.Fatal("the build zone must be reachable from spawn")
 	}
 
 	nextToVine := false
@@ -92,4 +92,24 @@ func reachable(w *World, start Point, bounds Rect) map[Point]bool {
 		}
 	}
 	return seen
+}
+
+func TestBuildZoneIsTheWholeValleyInterior(t *testing.T) {
+	m := GenerateDevMap(1)
+	for _, p := range []Point{
+		{m.Spawn.X + 6, m.Spawn.Y},         // open ground beside the plaza
+		{20, 10},                           // the north-west vineyard
+		{20, 80},                           // the old fenced yard
+		{80, 80},                           // the south-east field
+		{1, 1}, {devSize - 2, devSize - 2}, // just inside the poplar border
+	} {
+		if !m.BuildZone.Contains(p.X, p.Y) {
+			t.Errorf("%v should be in the build zone %v", p, m.BuildZone)
+		}
+	}
+	for _, p := range []Point{{0, 0}, {devSize - 1, 40}, {40, devSize - 1}} {
+		if m.BuildZone.Contains(p.X, p.Y) {
+			t.Errorf("the border tile %v must stay outside the build zone", p)
+		}
+	}
 }
