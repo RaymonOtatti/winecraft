@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WineCraft — Valle de Uco</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1410; color: #e8dcc8; font: 16px system-ui, sans-serif; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; }
+</style>
+</head>
+<body>
+<div id="loading">Cargando WineCraft…</div>
+<script src="wasm_exec.js"></script>
+<script>
+  const go = new Go();
+  WebAssembly.instantiateStreaming(fetch("winecraft.wasm"), go.importObject)
+    .then(r => { document.getElementById("loading").remove(); go.run(r.instance); })
+    .catch(e => { document.getElementById("loading").textContent = "No se pudo cargar el juego: " + e; });
+</script>
+</body>
+</html>

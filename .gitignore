@@ -10,3 +10,4 @@ __pycache__/
 *.db-wal
 *.db-shm
 /snap/
+/web/wasm_exec.js
