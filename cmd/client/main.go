@@ -18,6 +18,8 @@ func main() {
 	snap := flag.String("snap", "", "save frame 30 as a PNG at this path and quit")
 	seed := flag.Uint64("seed", 1, "dev map seed (offline mode)")
 	at := flag.String("at", "", "start at tile x,y instead of spawn (for snapshots)")
+	walk := flag.String("walk", "", `scripted route for snapshots, e.g. "W4,N2"`)
+	touch := flag.Bool("touch", false, "show the touch D-pad without a touch screen")
 	flag.Parse()
 
 	// Offline mode until networking lands (BUILD.md B4.3): the dev map, at spawn.
@@ -30,6 +32,12 @@ func main() {
 	}
 	g := client.NewGame(m.World, pos)
 	g.SnapPath = *snap
+	g.ShowDpad = *touch
+	if *walk != "" {
+		if err := g.Script(*walk); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	ebiten.SetWindowTitle("WineCraft — Valle de Uco")
 	ebiten.SetWindowSize(2*client.BaseW, 2*client.BaseH)
