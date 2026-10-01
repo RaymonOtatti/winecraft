@@ -232,7 +232,7 @@ Real towns are hubs: market, lab, supply shop, inn (respawn), notice board for q
 
 ### 7.2 Ampelodex (the collection)
 
-- **Grape varieties.** Encounter rarity is **proportional to the real planted hectares** in INV statistics, so Malbec is everywhere and rare varieties are rare for real. You "collect" a variety by sampling a vine in the field (no capture mechanics, see §13). Collected varieties unlock as cuttings you can plant.
+- **Grape varieties.** Encounter rarity is **proportional to the real planted hectares** in INV statistics (the 2025 CSV has hectares by district and variety: in Uco, Malbec is 16,592.7 of 29,934.5 ha, while Nebbiolo has 1.8 ha), so Malbec is everywhere and rare varieties are rare for real. You "collect" a variety by sampling a vine in the field (no capture mechanics, see §13). Collected varieties unlock as cuttings you can plant.
 - **Soils** of each zone (calcareous, alluvial boulders, sandy), with their sourced descriptions.
 - **Native species** from **real GBIF occurrence records** for the valley, CC0/CC-BY only. You photograph them in the field (cóndor, guanaco, zorro gris, jarilla, chañar…), so the "tall grass" encounters are real wildlife, observed and not fought.
 - **Bodegas and IGs** you've visited, each a factual card with sources.
@@ -262,6 +262,31 @@ PvP (player against player) uses the same rules, so a deterministic shared Go `d
 - **Markets:** a town market (NPC buyers at real prices, with daily noise inside a sourced range), bulk-wine sales, and later player-to-player trading.
 - **The ledger is correct by construction:** a double-entry append-only ledger in SQLite, with invariants checked by tests (money is never created or destroyed outside defined sources and sinks). The server is the only authority; the client never computes a balance.
 - **Real bodegas:** cards show public facts (hectares, founding year, IG, wines, published production if it exists). Never invented finances.
+- **Every price record has a `kind`:** `paid`, `offered`, `asked`, `list` or `sale`. The research shows these differ a lot (in 2026 producers asked ≥ 300 ARS/kg while wineries offered about 210), so the game never mixes them silently.
+
+### 8.1 What the real numbers say (researched 2026-10-01, sources in C.4)
+
+**Growing and selling grapes in Valle de Uco loses money right now.** For the 2025/26 season the rural federation and the Uco rural society put the cost at **7.05 M ARS per hectare** against **4.4 M of revenue**: a **loss of 2.65 M ARS/ha**. Wineries offered about **220–300 ARS/kg** for fine grapes in 2026, against the roughly 500 producers say they need. Bulk red wine was about **350 ARS/L** in July 2026.
+
+The value is in the bottle: Zuccardi Serie A Malbec lists at about USD 12, Zuccardi Q at about USD 18, Finca Piedra Infinita 2020 at about USD 152, and PerSe La Craie at USD 250 from the winery.
+
+**This makes a good game, honestly told.** Selling raw grapes is the realistic losing move. Players earn by adding value: making wine, raising quality, bottling, building a name through medals, and selling direct. The economy shows the real squeeze instead of hiding it.
+
+**Anchor numbers for the first price table** (all dated; full list in C.4):
+
+| Item | Value | Kind | Date |
+|---|---|---|---|
+| Fine grapes, Uco | 220 ARS/kg | offered | 2026-02 |
+| Malbec, Tupungato | 600–680 ARS/kg | paid | 2025 harvest |
+| Bulk basic red | 350 ARS/L | list (Bolsa) | 2026-07 |
+| Vineyard cost, Uco | 7,050,000 ARS/ha/yr | study | 2025/26 |
+| Vineyard worker, entry level (CCT 154/91) | 17,252.84 ARS/day | agreement | 2026-03 |
+| Harvest pay, fine grapes | 600–700 ARS/bin | paid | 2025 |
+| Planted vineyard, Gualtallary | USD 70,000–90,000/ha | bank estimate | **2019 (stale)** |
+| New French oak barrique, 225 L | USD 1,377 | list | 2026-10 |
+| Official exchange rate (BCRA) | 1,517 ARS/USD | official | 2026-09-30 |
+
+**Gaps the registry must fill before Phase 7:** official grape prices by variety and department (the Bolsa de Comercio de Mendoza publishes them, but its site timed out); the weight of a harvest bin in kg; Uco land prices after 2019; prices for a concrete tank and a pneumatic press; an itemized high-altitude cost model (the IDR site doesn't resolve).
 
 ---
 
@@ -577,6 +602,59 @@ Checked 2026-10-01 against the sources listed (source ids in Appendix C).
 | Pure-Go SQLite | https://pkg.go.dev/modernc.org/sqlite · https://github.com/ncruces/go-sqlite3 · https://sqlite.org/wal.html |
 | OSM PBF in Go | https://pkg.go.dev/github.com/paulmach/osm/osmpbf |
 
-### C.4 Economy
+### C.4 Economy (researched 2026-10-01)
 
-⟨pending: economics research⟩
+**Vineyard area by variety (INV, as of 2025-12-31).** Total Uco: 29,934.5 ha (21% of Mendoza); 109 registered / 97 producing wineries in 2021.
+
+| Variety | Tupungato | Tunuyán | San Carlos | Uco total |
+|---|---|---|---|---|
+| Malbec | 5,124.4 | 5,697.9 | 5,770.4 | 16,592.7 |
+| Cabernet Sauvignon | 941.6 | 1,222.3 | 759.4 | 2,923.3 |
+| Chardonnay | 1,193.9 | 629.9 | 256.1 | 2,079.9 |
+| Merlot | 515.8 | 490.8 | 177.4 | 1,184.0 |
+| Pinot Noir | 548.5 | 401.2 | 194.3 | 1,144.0 |
+| Cabernet Franc | 340.5 | 537.6 | 248.5 | 1,126.6 |
+| Tempranillo | 264.2 | 201.2 | 552.6 | 1,018.0 |
+| Bonarda | 786.7 | 163.2 | 57.7 | 1,007.6 |
+| Sauvignon Blanc | 213.6 | 325.1 | 116.8 | 655.5 |
+| Syrah | 168.8 | 288.1 | 189.6 | 646.5 |
+| Semillón | 169.9 | 19.0 | 42.4 | 231.3 |
+| Petit Verdot | 21.7 | 134.0 | 32.5 | 188.2 |
+| Torrontés Riojano | 138.0 | 15.6 | 21.2 | 174.8 |
+| Pinot Gris | 27.6 | 72.2 | 16.0 | 115.8 |
+
+Rare in Uco (ha): Barbera 35.9, Tannat 28.8, Garnacha 19.7, Corvina 16.3 (97% of Mendoza's is in Tupungato), Croatina 14.9, Riesling 13.7, Carmenère 12.9, Nebbiolo 1.8, Garnacha Blanca 1.6. District examples: La Consulta 5,210.5 ha, Gualtallary 2,868.0, Vista Flores 2,065.8.
+
+**Prices and costs**
+
+| Item | Value | Kind | Date | Source |
+|---|---|---|---|---|
+| Grapes, Mendoza Tintas A | USD 0.70/kg (Uco Malbec "USD 1 and up") | asked | 2024-01 | https://campoandino.ar/precios-en-dolares-para-la-uva-2024-definieron-vinateros-de-mendoza-y-de-san-juan/ |
+| Grapes, Uco | ~500 ARS/kg | offered | 2025-03 | https://bichosdecampo.com/las-bodegas-estan-ofreciendo-un-valor-similar-al-del-ano-pasado-cuando-de-por-medio-tuvimos-una-inflacion-monstruosa-denuncia-mario-leiva-que-defiende-a-los-productores-de-uva-del-valle/ |
+| Malbec, Tupungato | 600–680 ARS/kg | paid | 2025 harvest | https://masp.lmneuquen.com/vitivinicultura/crisis-mendoza-uvas-precio-y-un-llamado-urgente-repensar-la-vitivinicultura-n1234713 |
+| Fine grapes, Uco | 220 ARS/kg | offered | 2026-02 | https://www.sitioandino.com.ar/departamentales/crisis-la-vitivinicultura-el-valle-uco-productores-podrian-no-cosechar-y-levantar-vinedos-n5718016 |
+| Grapes, Mendoza | asked ≥300 / offered ~210 ARS/kg | asked / offered | 2026-03 | https://www.diariodecuyo.com.ar/economia/alfredo-aciar-los-productores-uva-deben-cerrar-precio-al-final-la-elaboracion-no-malvender-n6567530 |
+| Bulk basic red / superior red | 350 / 420 ARS/L | list (Bolsa) | 2026-07 | https://www.mendovoz.com/actualidad/panorama-vitivinicola/2026/8/3/vino-granel-la-bolsa-de-comercio-de-mendoza-analiza-el-escenario-exportador-174796.html |
+| Bulk Malbec varietal | ~700 ARS/L | reported | 2026-04 | lmneuquen (above) |
+| Vineyard cost, Uco 2025/26 | 7,050,000 ARS/ha (revenue 4,400,000; loss 2,650,000) | study (CRA + SRVU) | 2026-07 | https://www.mdzol.com/dinero/advierten-que-producir-vino-ya-implica-perder-265-millones-hectarea-n1561204 |
+| Itemized cost model (East Mendoza, trellis) | 323,583 ARS/ha = 24.89 ARS/kg at 13,000 kg/ha | study (INTA) | 2021-01 | https://www.argentina.gob.ar/sites/default/files/estimacion_de_costos_de_produccion_para_vid_de_vinificar_enero_2021_-_inta_final.pdf |
+| Vineyard worker, CCT 154/91 | 17,252.84 ARS/day; 431,321/month | agreement | 2026-03/04 | https://soevarivadavia.org.ar/Escalas/Vina_2026-03y04.pdf |
+| Harvest pay per bin | 400–500 common, 600–700 fine | paid | 2025 | https://www.mdzol.com/dinero/2025/1/29/pagarian-la-uva-igual-que-el-ano-pasado-se-encendieron-alarmas-entre-los-productores-1184366.html |
+| Planted vineyard | Gualtallary USD 70–90k/ha; Tupungato ≤60k; Tunuyán 40k; San Carlos 35k | bank estimate | 2019-02 | https://www.iprofesional.com/vinos/286154-vinos-argentinos-vinos-recomendados-vinos-malbec-Vinos-de-terruno-cuanto-vale-una-hectarea-en-Gualtallary |
+| French oak barrique 225 L | USD 1,377 | list | 2026-10 | https://www.wineandbeersupply.com/products/world-cooperage-traditional-series-french-oak-barrel-225l |
+| Destemmer | USD 787.60 (small) – 17,750 (W7) | list | 2026-10 | https://dwinesupplies.com/collections/winemaking-equipment/destemmers |
+| Bottle / cork / label | USD 0.50–3.00 / 0.30–1.00+ / 0.20–1.00 | range | 2025-06 | https://ashlandcontainer.com/blog/wine-packaging-pricing-guide |
+| Bottle cost split (Coviar) | glass 23.44%, labels 9.38%, cork 4.50%, capsule 3.44% | study | 2026-08 | https://www.lanacion.com.ar/economia/campo/es-triste-el-desconocido-dato-que-muchos-ya-advierten-detras-del-valor-de-una-botella-de-vino-nid05082026/ |
+| Zuccardi Finca Piedra Infinita 2020 | ARS 230,000 (≈ USD 152) | list | 2026-10 | https://tienda.aldosvinoteca.com/search/?q=piedra+infinita |
+| Zuccardi Q Malbec / Serie A Malbec | ARS 27,300 / 17,800 list | list | 2026-10 | https://www.espaciovino.com.ar/vinos-ficha/Zuccardi-Q-Malbec · https://www.espaciovino.com.ar/vinos-ficha/Zuccardi-Serie-A-Malbec |
+| PerSe La Craie / Iubileus | USD 250 each (members, shipping included) | list | 2026-10 | https://persevines.com/en/shop/ |
+| Salentein Reserva Malbec | ARS 14,600 list | list | 2026-10 | https://www.espaciovino.com.ar/vinos-ficha/Salentein-Reserva-Malbec |
+
+**Machine-readable sources to automate**
+
+| Source | Endpoint | Format |
+|---|---|---|
+| INV vineyard area 2025 | https://datos.magyp.gob.ar/dataset/5f97a0b9-f677-4657-9e07-0cd3b98da754/resource/b5e49c34-0a6e-448a-80d7-2bbf61632204/download/inv-superficie-viniedos-2025.csv (CKAN: `package_show?id=superficie-implantada-con-vinedos-republica-argentina`) | CSV, annual, CC BY 4.0 |
+| BCRA official rate | https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones/USD?fechadesde=YYYY-MM-DD&fechahasta=YYYY-MM-DD | JSON, daily |
+| MEP rate | https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa | JSON, daily |
+| Bolsa de Comercio de Mendoza (grapes by variety and department; bulk wine) | `www.bolsamza.com.ar/web2/mercados/uvas/mercado_varietal.php` (origen 17 Tunuyán, 18 Tupungato, 19 San Carlos; variedad 101 Malbec) | HTML tables; **timed out 2026-10-01**, retry in Phase 0 |
