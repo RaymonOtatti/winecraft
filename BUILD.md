@@ -20,7 +20,7 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* `make test` is green on an empty module.
 
 ## B1 — World core (`internal/world`, TDD)
-- [ ] **B1.1** Tile registry (id, name, walkable, layer, breakable, placeable, drop). Chunk = 32×32 with layers `ground`/`object`, stored as `[]uint16`. World chunks keyed by an integer pair, never strings. Get/Set across chunk borders, negative coordinates included.
+- [x] **B1.1** Tile registry (id, name, walkable, layer, breakable, placeable, drop). Chunk = 32×32 with layers `ground`/`object`, stored as `[]uint16`. World chunks keyed by an integer pair, never strings. Get/Set across chunk borders, negative coordinates included.
   *Verify:* `go test ./internal/world/...` covers borders and negatives.
 - [ ] **B1.2** Movement rules: `CanStep(from, dir)` blocks on solid objects and water; **ledges are one-way** (hop down, not up, Pokémon style).
   *Verify:* table tests per direction and ledge case.
@@ -79,3 +79,4 @@ Nothing gets pushed to any remote until Franco says so.
 <!-- one line per finished item: date · item · what was verified (command + result) · commit -->
 - 2026-10-01 · B0.1 · branch `go-rebuild`, `go.mod` (module github.com/RaymonOtatti/winecraft, go 1.26.4), `.gitignore` extended, root `doc.go` · `go vet ./...` exit 0 · see commit
 - 2026-10-01 · B0.2 · `Makefile` with test (-race), vet, fuzz, wasm, size, run, client, snap, share, clean · `make test` exit 0 · see commit
+- 2026-10-01 · B1.1 · `internal/world`: 17-tile registry (vines not breakable), 32×32 chunks as flat `[2][1024]uint16`, `ChunkCoord` integer keys, shift/mask `ChunkOf` · `go test -race ./internal/world/...` 6/6 pass (borders, negatives, layers, no alloc on read) · see commit
