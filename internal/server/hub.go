@@ -240,6 +240,16 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 		if h.state.SetHotbar(c.id, m.Slots) != nil {
 			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
 		}
+	case *proto.Craft:
+		if err := h.state.Craft(c.id, world.RecipeID(m.Recipe), time.Now()); err != nil {
+			code := proto.ErrNotAllowed
+			if errors.Is(err, game.ErrNoMaterial) {
+				code = proto.ErrNoMaterial
+			} else if errors.Is(err, game.ErrRateLimited) {
+				code = proto.ErrRateLimited
+			}
+			h.sendTo(c, &proto.Error{Code: code})
+		}
 	default:
 		// anything else from a client is ignored
 	}

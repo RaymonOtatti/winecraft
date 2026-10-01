@@ -32,6 +32,7 @@ func samples() []Msg {
 		&Inventory{Items: []Item{{ID: world.ItemGrapes, Count: 3}, {ID: world.ItemStone, Count: 12}}},
 		&Interact{X: 6, Y: -5},
 		&Hotbar{Slots: [HotbarSlots]world.ItemID{world.ItemStone, world.ItemNone, world.ItemGrapes, world.ItemFence}},
+		&Craft{Recipe: 3},
 		&Inventory{},
 		&Ping{Nonce: 99},
 		&Error{Code: ErrBadJoinCode, Text: "código incorrecto"},

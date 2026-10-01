@@ -14,12 +14,11 @@ const RegrowAfter = 2 * time.Minute
 // GrapesPerHarvest is what one vine gives (from the tile registry).
 var GrapesPerHarvest = world.Def(world.Vine).GatherN
 
-// StarterKit is what every new player carries, so building can start at once.
+// StarterKit is what every new player carries. B7.7 reduced it to a
+// "first day" minimum until B8 writes the first story task and tunes it.
 var StarterKit = map[world.ItemID]int{
-	world.ItemPlanks: 10,
-	world.ItemFence:  10,
-	world.ItemStone:  5,
-	world.ItemCrate:  3,
+	world.ItemPlanks: 5,
+	world.ItemFence:  5,
 }
 
 var ErrNoMaterial = errors.New("not enough material")

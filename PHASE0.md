@@ -15,7 +15,7 @@ metadata:
 
 ## Checklist (PASS when all items are satisfied)
 - [ ] Every fact in the slice has a source record (`data/registry/*.yaml`).
-- [ ] Data manifest checksummed.
+- [x] Data manifest checksummed.
 - [ ] Bounding‑box and scale written down in `data/world_params.yaml`.
 - [ ] Raymon’s permission obtained (see `memory/winecraft-repo-permission.md`).
 - [ ] Hero bodegas have consent for interior details.
@@ -24,7 +24,7 @@ metadata:
 
 ## Next actions
 - Draft email to Raymon (completed, see memory).
-- Begin downloading the Copernicus GLO‑30 DEM (large file, ~3 GB) – we’ll checksum it.
+- [x] Downloaded and checksummed the Copernicus GLO‑30 DEM tiles (6 × ~36 MB) – manifest in `data/sources/raw/MANIFEST.txt`.
 - [x] Create the registry schema file (`data/registry/schema.yaml`).
 
 When you’re ready, let me know the speed‑test results or if you’d like me to start the DEM download.

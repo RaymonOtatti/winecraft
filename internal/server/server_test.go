@@ -529,6 +529,18 @@ func TestJoinSendsTheStarterInventory(t *testing.T) {
 	}))
 }
 
+func TestCraftingOverTheNetwork(t *testing.T) {
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	c := dial(t, srv)
+	c.join("Franco")
+
+	c.send(&proto.Craft{Recipe: uint8(world.RecipePlanks)})
+	c.next("ErrNoMaterial without rollizo", isError(proto.ErrNoMaterial))
+
+	c.send(&proto.Craft{Recipe: uint8(world.NumRecipes())})
+	c.next("ErrNotAllowed for unknown recipe", isError(proto.ErrNotAllowed))
+}
+
 func TestHarvestOverTheNetwork(t *testing.T) {
 	m := buildMap()
 	m.World.Set(5, 4, world.Vine) // north of spawn (5,5)

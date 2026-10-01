@@ -80,7 +80,7 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* game + network tests (assign, persist across restart, refuse unknown items); snapshot of the panel.
 - [ ] **B7.6** Two open-world gathering zones with **real** materials (sources in PLAN Appendix C): **west** = Cordón del Plata / Tupungato front (Andes), **east** = Huayquerías badlands toward the eastern oasis. Added beside the valley at x < 0 and x ≥ 96 so valley coordinates and saves stay valid. Resource nodes regrow. The save records the map's layout digest: on a mismatch, players are kept and stale chunks dropped.
   *Verify:* map tests (zones reachable from spawn, every node yields a real item); save-compat test; snapshots of both zones.
-- [ ] **B7.7** Hand crafting: raw materials → building materials with real recipe bases (crafting panel, **K**). Starter kit reduced to what the first story task needs.
+- [x] **B7.7** Hand crafting: raw materials → building materials with real recipe bases (crafting panel, **K**). Starter kit reduced to what the first story task needs.
   *Verify:* recipe tests (inputs consumed, output given, unknown recipe refused, server-side only); snapshot.
 
 ## B8 — Story, guide chat and map (Franco's item 8, in his order)

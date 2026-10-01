@@ -86,7 +86,7 @@ func NewPads(w, h, n int) Pads {
 type Buttons struct {
 	Use, Build, Break  bool
 	Help               bool          // toggle the command side bar
-	Inv, Esc, Up, Down bool          // inventory panel
+	Inv, Craft, Esc, Up, Down bool    // inventory and crafting panels
 	Taps               []image.Point // taps and clicks this frame, for the panel
 	Slot               int           // hotbar slot picked directly, or -1
 	Next, Prev         bool
@@ -128,6 +128,7 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	b.Break = anyJustPressed(keysBreak)
 	b.Help = inpututil.IsKeyJustPressed(ebiten.KeyH)
 	b.Inv = inpututil.IsKeyJustPressed(ebiten.KeyI) || inpututil.IsKeyJustPressed(ebiten.KeyTab)
+	b.Craft = inpututil.IsKeyJustPressed(ebiten.KeyK)
 	b.Esc = inpututil.IsKeyJustPressed(ebiten.KeyEscape)
 	b.Up = inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW)
 	b.Down = inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS)

@@ -50,6 +50,7 @@ type Game struct {
 	tiles   [64]*ebiten.Image // sub-images of one atlas, so draws batch
 	icons   [64]*ebiten.Image // item icons, one atlas
 	panel   InvPanel
+	craft   CraftPanel
 	player  [4][2]*ebiten.Image
 	w, h    int
 	frame   int
@@ -105,8 +106,9 @@ func NewGame(s *Session, n *Net) *Game {
 
 // Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,C,Z60":
 // N/S/W/E<n> walk n steps, A uses, C builds, X breaks, I toggles the
-// inventory, H<n> picks hotbar slot n (or, with the inventory open, puts the
-// highlighted item there), Z<n> waits n ticks. The snapshot is taken after.
+// inventory, K toggles the crafting panel, H<n> picks hotbar slot n (or, with
+// the inventory open, puts the highlighted item there), Z<n> waits n ticks.
+// The snapshot is taken after.
 func (g *Game) Script(route string) error {
 	tps := ebiten.DefaultTPS
 	for _, part := range strings.Split(route, ",") {
@@ -122,6 +124,9 @@ func (g *Game) Script(route string) error {
 			continue
 		case part == "I": // inventory panel
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Inv: true, Slot: -1}})
+			continue
+		case part == "K": // crafting panel
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Craft: true, Slot: -1}})
 			continue
 		case part == "X", part == "B": // break
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Break: true, Slot: -1}})
@@ -218,9 +223,14 @@ func (g *Game) Update() error {
 	b := g.Input.PollButtons(pads)
 	if b.Inv {
 		g.panel.Toggle()
+		g.craft.Open = false
+	}
+	if b.Craft {
+		g.craft.Toggle()
+		g.panel.Open = false
 	}
 	dir, held := g.Input.Poll(pads.Dpad)
-	if g.panel.Open {
+	if g.panel.Open || g.craft.Open {
 		held = false // the open panel takes the arrows
 	}
 	m, sent := g.S.Me.Update(dt, dir, held)
@@ -241,6 +251,10 @@ func (g *Game) Update() error {
 	}
 	if g.panel.Open {
 		g.updatePanel(b)
+		return nil
+	}
+	if g.craft.Open {
+		g.updateCraftPanel(b)
 		return nil
 	}
 	g.S.Hotbar.Select(b.Slot)
@@ -377,6 +391,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawHotbar(screen, pads)
 		if g.panel.Open {
 			g.drawPanel(screen)
+		}
+		if g.craft.Open {
+			g.drawCraftPanel(screen)
 		}
 	}
 	g.drawHUD(screen, pads)

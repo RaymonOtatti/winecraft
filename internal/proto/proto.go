@@ -20,7 +20,8 @@ import (
 // Version is sent in Hello; the server refuses clients on another version.
 // 2: inventory entries are items, not tiles; Interact added.
 // 3: Hotbar added.
-const Version uint16 = 3
+// 4: Crafting panel (K) added.
+const Version uint16 = 4
 
 // HotbarSlots is how many items the hotbar holds (keys 1-4).
 const HotbarSlots = 4
@@ -53,6 +54,7 @@ const (
 	TypeError                       // server → client
 	TypeInteract                    // client → server: use what is at (X, Y), e.g. harvest a vine
 	TypeHotbar                      // both ways: the item in each hotbar slot
+	TypeCraft                       // client → server: craft a recipe by id
 	numTypes
 )
 
@@ -60,7 +62,7 @@ var names = map[Type]string{
 	TypeHello: "Hello", TypeWelcome: "Welcome", TypeChunk: "Chunk", TypeMove: "Move",
 	TypePlayerState: "PlayerState", TypePlayerLeft: "PlayerLeft", TypeEdit: "Edit",
 	TypeTileUpdate: "TileUpdate", TypeInventory: "Inventory", TypePing: "Ping", TypeError: "Error",
-	TypeInteract: "Interact", TypeHotbar: "Hotbar",
+	TypeInteract: "Interact", TypeHotbar: "Hotbar", TypeCraft: "Craft",
 }
 
 func (t Type) String() string {
@@ -148,6 +150,9 @@ type Interact struct{ X, Y int32 }
 // Hotbar is the item in each slot; ItemNone leaves a slot empty.
 type Hotbar struct{ Slots [HotbarSlots]world.ItemID }
 
+// Craft asks the server to craft one recipe by id.
+type Craft struct{ Recipe uint8 }
+
 type Error struct {
 	Code uint8
 	Text string
@@ -166,6 +171,7 @@ func (*Ping) Type() Type        { return TypePing }
 func (*Error) Type() Type       { return TypeError }
 func (*Interact) Type() Type    { return TypeInteract }
 func (*Hotbar) Type() Type      { return TypeHotbar }
+func (*Craft) Type() Type       { return TypeCraft }
 
 // Encode serializes m. It fails if a field exceeds its limit.
 func Encode(m Msg) ([]byte, error) {
@@ -217,6 +223,8 @@ func Decode(b []byte) (Msg, error) {
 		m = new(Interact)
 	case TypeHotbar:
 		m = new(Hotbar)
+	case TypeCraft:
+		m = new(Craft)
 	default:
 		return nil, fmt.Errorf("unknown message type %d", b[0])
 	}
@@ -384,6 +392,9 @@ func (m *Hotbar) decode(r *reader) {
 		m.Slots[i] = r.item()
 	}
 }
+
+func (m *Craft) encode(w *writer) { w.u8(m.Recipe) }
+func (m *Craft) decode(r *reader) { m.Recipe = r.u8() }
 
 func (m *Ping) encode(w *writer) { w.u32(m.Nonce) }
 func (m *Ping) decode(r *reader) { m.Nonce = r.u32() }
