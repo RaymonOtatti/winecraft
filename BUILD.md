@@ -67,6 +67,31 @@ Nothing gets pushed to any remote until Franco says so.
 - [x] **B6.2** Persistence behind a `Store` port: a file adapter (atomic write and rename) that saves edits, vine states, and per-token inventories and positions every 30 s and on shutdown. SQLite comes later as a second adapter.
   *Verify:* a test that restarts the server and checks edits and inventory survive; `kill -9` loses at most 30 s.
 
+## B7 — Refinements from the first live test (Franco, 2026-10-01)
+- [ ] **B7.1** Controls: **C builds**, **X breaks**, **Space/Enter/Z uses** (harvest now, talk later). Every refused action says why in a toast ("Acá no se puede construir", "No hay nada para romper", "Te faltan materiales"). The cursor always marks the faced tile: light when you can build there, red when not. Touch gets three buttons (C, X, A).
+  *Verify:* client tests for the key → action mapping and refusal notices; snapshot with the red and the light cursor.
+- [ ] **B7.2** Build zone = the **whole central valley**, not a fenced sandbox. Players build on open ground (grass, dirt, sand); roads, water, bridges, the plaza, vineyards and trees are never editable. `Welcome` carries the build zone.
+  *Verify:* game tests (place on grass in the valley OK; on road, water, plaza, next to a vine's tile OK but never on the vine; outside the valley refused); network test; snapshot of a build on open ground near spawn.
+- [ ] **B7.3** Side bar with the main commands (toggle with **H**, shown on first visit).
+  *Verify:* snapshot.
+- [ ] **B7.4** Top bar with the current goal ("Objetivo: …").
+  *Verify:* snapshot; the goal text comes from one function B8 will drive.
+- [ ] **B7.5** Editable hotbar: an inventory panel (**I** or **Tab**; a touch button) lists everything you carry; pick an item and press **1–4** (or tap a slot) to put it there. Slots hold items, not tiles. The layout is saved in your server profile. Protocol v3.
+  *Verify:* game + network tests (assign, persist across restart, refuse unknown items); snapshot of the panel.
+- [ ] **B7.6** Two open-world gathering zones with **real** materials (sources in PLAN Appendix C): **west** = Cordón del Plata / Tupungato front (Andes), **east** = Huayquerías badlands toward the eastern oasis. Added beside the valley at x < 0 and x ≥ 96 so valley coordinates and saves stay valid. Resource nodes regrow. The save records the map's layout digest: on a mismatch, players are kept and stale chunks dropped.
+  *Verify:* map tests (zones reachable from spawn, every node yields a real item); save-compat test; snapshots of both zones.
+- [ ] **B7.7** Hand crafting: raw materials → building materials with real recipe bases (crafting panel, **K**). Starter kit reduced to what the first story task needs.
+  *Verify:* recipe tests (inputs consumed, output given, unknown recipe refused, server-side only); snapshot.
+
+## B8 — Story, guide chat and map (Franco's item 8, in his order)
+- [ ] 🛑 **B8.0** Write `STORY.md`: premise, the mentor (a role, not a real person), **≥ 10 story tasks** that lead to building the **crafting bench**, then the bench's winemaking tools (store, press, filter, …), every fact sourced. **Franco reviews before any of it is built.**
+- [ ] **B8.1** (a) Side chat panel with the primary instructions: the mentor's scripted messages for the current step.
+- [ ] **B8.2** (b) Quest engine (server-side progress per player, saved) + **task 1**.
+- [ ] **B8.3** (c) **Task 2**.
+- [ ] 🛑 **B8.4** (d) Chat answered by an agent on the NAS through the **Google Antigravity CLI** (or the compliant equivalent the research finds), one context per player that knows their step, game-only rules, no tools, rate-limited, injection-safe. **Ask Franco before installing anything on the NAS.**
+- [ ] **B8.5** (e) Discoverable map, top-right: fog of war that clears as you explore, saved per player.
+- [ ] **B8.6** (f) Tasks 3–10+, the crafting bench, and its first winemaking tools.
+
 ## ✅ BASE gate (all must hold)
 - Two computers over the tunnel: both move, see each other, build in the sandbox, harvest, and edits sync.
 - A server restart keeps edits and inventories.
