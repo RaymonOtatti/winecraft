@@ -2,21 +2,64 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WineCraft — Valle de Uco</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #1b1410; color: #e8dcc8; font: 16px system-ui, sans-serif; }
-  #loading { position: fixed; inset: 0; display: grid; place-items: center; }
+  :root { --bg: #1b1410; --ink: #f4e9d8; --muted: #c9b48a; --wine: #8e233a; --field: #2a1f19; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 16px/1.4 system-ui, sans-serif; }
+  #join { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; box-sizing: border-box; }
+  #join form { width: min(340px, 100%); display: grid; gap: 12px; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: .02em; }
+  .sub { margin: -8px 0 8px; color: var(--muted); }
+  label { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+  input { font: inherit; color: var(--ink); background: var(--field); border: 1px solid #4a3a2e; border-radius: 6px; padding: 10px 12px; }
+  input:focus { outline: 2px solid var(--muted); outline-offset: 1px; }
+  button { font: inherit; font-weight: 600; color: var(--ink); background: var(--wine); border: 0; border-radius: 6px; padding: 12px; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .hint, #state { font-size: 13px; color: var(--muted); margin: 0; }
 </style>
 </head>
 <body>
-<div id="loading">Cargando WineCraft…</div>
+<div id="join">
+  <form id="form" autocomplete="on">
+    <h1>WineCraft</h1>
+    <p class="sub">Valle de Uco, Mendoza</p>
+    <label>Tu nombre
+      <input id="name" name="name" maxlength="24" required autocomplete="nickname" spellcheck="false">
+    </label>
+    <label>Código para entrar
+      <input id="code" name="code" maxlength="32" required autocomplete="off" autocapitalize="none" spellcheck="false">
+    </label>
+    <button id="go" type="submit">Entrar</button>
+    <p id="state">Descargando el juego…</p>
+    <p class="hint">Mové con flechas o WASD · A: espacio · B: X · 1–4 eligen bloque</p>
+  </form>
+</div>
 <script src="wasm_exec.js"></script>
 <script>
+  const form = document.getElementById("form"), nameEl = document.getElementById("name"),
+        codeEl = document.getElementById("code"), state = document.getElementById("state");
+  const params = new URLSearchParams(location.search);
+  if (params.get("code")) codeEl.value = params.get("code");   // a shared link can carry the code
+  try { nameEl.value = localStorage.getItem("winecraft.name") || ""; } catch (e) {}
+  (nameEl.value ? codeEl : nameEl).focus();
+
+  // Download the game while the player types; start it on submit.
   const go = new Go();
-  WebAssembly.instantiateStreaming(fetch("winecraft.wasm"), go.importObject)
-    .then(r => { document.getElementById("loading").remove(); go.run(r.instance); })
-    .catch(e => { document.getElementById("loading").textContent = "No se pudo cargar el juego: " + e; });
+  const ready = WebAssembly.instantiateStreaming(fetch("winecraft.wasm"), go.importObject)
+    .then(r => { state.textContent = "Listo."; return r.instance; })
+    .catch(e => { state.textContent = "No se pudo cargar el juego: " + e; throw e; });
+
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const name = nameEl.value.trim(), code = codeEl.value.trim();
+    try { localStorage.setItem("winecraft.name", name); } catch (e) {}
+    globalThis.WINECRAFT_JOIN = { name, code };
+    document.getElementById("go").disabled = true;
+    const instance = await ready;
+    document.getElementById("join").remove();
+    go.run(instance);
+  });
 </script>
 </body>
 </html>

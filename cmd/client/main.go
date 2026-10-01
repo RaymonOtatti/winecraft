@@ -39,8 +39,12 @@ func main() {
 		}
 		g = client.NewGame(client.OfflineSession(m, pos), nil)
 	} else {
+		if *name == "" || *code == "" {
+			log.Fatal("playing on a server needs -name and -code")
+		}
 		n := client.StartNet(context.Background(), client.NetConfig{URL: *server, Name: *name, JoinCode: *code})
 		g = client.NewGame(client.NewSession(), n)
+		g.MyName = *name
 	}
 	g.SnapPath = *snap
 	g.ShowDpad = *touch

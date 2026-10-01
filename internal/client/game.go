@@ -29,12 +29,17 @@ type Game struct {
 	Net    *Net // nil when playing offline
 	Input  Input
 	Hotbar *Hotbar
+	MyName string
 
 	// SnapPath, when set, saves frame SnapFrame as a PNG and quits.
 	SnapPath  string
 	SnapFrame int
 	Stay      time.Duration // keep playing this long after the snapshot (multi-client checks)
 	ShowDpad  bool          // draw the touch D-pad even before a touch (snapshots)
+
+	toast      Toast
+	noticeSeen int
+	unjoined   int // frames spent before joining (a rejected client still snapshots)
 
 	script  []scriptStep
 	tiles   [64]*ebiten.Image // sub-images of one atlas, so draws batch
@@ -149,7 +154,12 @@ func (g *Game) Update() error {
 	}
 	dt := time.Second / time.Duration(ebiten.TPS())
 	g.S.Tick(dt)
+	if g.S.NoticeSeq != g.noticeSeen {
+		g.noticeSeen = g.S.NoticeSeq
+		g.toast.Show(g.S.Notice, time.Now())
+	}
 	if !g.S.Joined {
+		g.unjoined++
 		return nil
 	}
 	g.frame++ // counts frames since joining, so scripts and snapshots wait for the server
@@ -283,14 +293,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
-	g.drawHotbar(screen, pads)
+	if g.S.Joined {
+		g.drawHotbar(screen, pads)
+	}
+	g.drawHUD(screen, pads)
 	if g.ShowDpad || g.Input.TouchSeen() {
 		drawDpad(screen, pads.Dpad)
 		drawButton(screen, pads.A, "A")
 		drawButton(screen, pads.B, "B")
 	}
 
-	if g.SnapPath != "" && g.frame >= g.SnapFrame && !g.snapped {
+	if g.SnapPath != "" && !g.snapped && (g.frame >= g.SnapFrame || g.unjoined >= 120) {
 		g.err = savePNG(screen, g.SnapPath)
 		g.snapped, g.quitAt = true, time.Now().Add(g.Stay)
 	}
@@ -323,6 +336,47 @@ func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
 	}
 }
 
+var dim = color.NRGBA{0x1b, 0x14, 0x10, 0xc8}
+
+// drawHUD draws the connection status, who is online, the selected tile's
+// name and any notice. Before joining it dims the screen and says why.
+func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
+	state := Online
+	if g.Net != nil {
+		state = g.Net.State()
+	}
+	status := StatusLine(g.S, g.Net != nil, state)
+	if !g.S.Joined {
+		vector.FillRect(screen, 0, 0, float32(g.w), float32(g.h), dim, false)
+		drawText(screen, status, (g.w-6*len(status))/2, g.h/2-8)
+		return
+	}
+	drawPlate(screen, status, 4, 4)
+	if g.Net != nil {
+		for i, n := range PlayerList(g.S, g.MyName) {
+			drawPlate(screen, n, g.w-4-6*len(n)-4, 4+i*12)
+		}
+	}
+	if t := g.toast.Text(time.Now()); t != "" {
+		drawPlate(screen, t, (g.w-6*len(t))/2, 20)
+	}
+	if len(p.Hotbar) > 0 {
+		label := HotbarLabel(g.Hotbar)
+		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
+	}
+}
+
+// drawPlate writes s on a dark plate whose top-left is (x, y).
+func drawPlate(screen *ebiten.Image, s string, x, y int) {
+	vector.FillRect(screen, float32(x), float32(y), float32(6*len(s)+4), 11, tagBack, false)
+	drawText(screen, s, x+2, y)
+}
+
+// drawText uses the debug font: 6 px per glyph, drawn 3 px above y.
+func drawText(screen *ebiten.Image, s string, x, y int) {
+	ebitenutil.DebugPrintAt(screen, s, x, y-3)
+}
+
 func drawButton(screen *ebiten.Image, r image.Rectangle, label string) {
 	cx, cy := float32(r.Min.X+r.Dx()/2), float32(r.Min.Y+r.Dy()/2)
 	vector.FillCircle(screen, cx, cy, float32(r.Dx()/2), padFill, true)
@@ -333,10 +387,7 @@ func drawButton(screen *ebiten.Image, r image.Rectangle, label string) {
 // drawNameTag centres name above (cx, bottom) on a dark plate. The debug
 // font is 6×16 px per glyph, with the glyph in the plate's middle rows.
 func drawNameTag(screen *ebiten.Image, name string, cx, bottom int) {
-	w := 6*len(name) + 4
-	x, y := cx-w/2, bottom-12
-	vector.FillRect(screen, float32(x), float32(y), float32(w), 11, tagBack, false)
-	ebitenutil.DebugPrintAt(screen, name, x+2, y-3)
+	drawPlate(screen, name, cx-(6*len(name)+4)/2, bottom-12)
 }
 
 // Layout picks a whole-number pixel scale, so tiles stay crisp at any window

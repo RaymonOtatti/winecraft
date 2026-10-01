@@ -13,14 +13,15 @@ import (
 // server sends. Only the game goroutine touches it; the network goroutine
 // hands messages over through a channel.
 type Session struct {
-	World   *world.World
-	Me      *Walker
-	MyID    uint32
-	Joined  bool
-	Bounds  world.Rect
-	Sandbox world.Rect
-	Players map[uint32]*Remote
-	Notice  string // the last server error, for the HUD
+	World     *world.World
+	Me        *Walker
+	MyID      uint32
+	Joined    bool
+	Bounds    world.Rect
+	Sandbox   world.Rect
+	Players   map[uint32]*Remote
+	Notice    string // the last server error, for the HUD
+	NoticeSeq int    // bumps on every error, so the same message can toast twice
 }
 
 // NewSession starts empty, waiting for a Welcome.
@@ -71,6 +72,7 @@ func (s *Session) Apply(m proto.Msg) {
 			s.World.Set(int(m.X), int(m.Y), m.Tile)
 		}
 	case *proto.Error:
+		s.NoticeSeq++
 		s.Notice = errorText[m.Code]
 		if s.Notice == "" {
 			s.Notice = "Error del servidor"
