@@ -153,3 +153,18 @@ func TestDpadHitTesting(t *testing.T) {
 		t.Error("a touch in the middle of the screen is not a D-pad press")
 	}
 }
+
+func TestAStepTakesExactlyTwelveTicksAt60Hz(t *testing.T) {
+	w := newWalker()
+	w.Update(tick, world.West, true) // starts the step
+	for i := 0; i < 11; i++ {
+		w.Update(tick, world.West, false)
+	}
+	if !w.Moving() {
+		t.Fatal("after 11 ticks the step is still under way")
+	}
+	w.Update(tick, world.West, false)
+	if w.Moving() {
+		t.Fatal("tick rounding must not stretch a 200 ms step to 13 ticks")
+	}
+}

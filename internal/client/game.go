@@ -25,9 +25,10 @@ var voidColor = color.RGBA{0x1b, 0x14, 0x10, 0xff} // outside the map
 // Game is the Ebitengine game: it moves the local player and draws the world
 // and everyone in it.
 type Game struct {
-	S     *Session
-	Net   *Net // nil when playing offline
-	Input Input
+	S      *Session
+	Net    *Net // nil when playing offline
+	Input  Input
+	Hotbar *Hotbar
 
 	// SnapPath, when set, saves frame SnapFrame as a PNG and quits.
 	SnapPath  string
@@ -46,9 +47,20 @@ type Game struct {
 	err     error
 }
 
+type scriptKind int
+
+const (
+	scriptWalk   scriptKind = iota // hold dir until n moves were sent
+	scriptWait                     // hold nothing for n ticks
+	scriptButton                   // press btn once, when standing still
+)
+
 type scriptStep struct {
-	dir   world.Dir
-	ticks int
+	kind   scriptKind
+	dir    world.Dir
+	n      int
+	btn    Buttons
+	budget int // walk steps give up after this many ticks (a wall can stop them)
 }
 
 // OfflineSession plays the dev map alone, without a server.
@@ -61,7 +73,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, SnapFrame: 30, w: BaseW, h: BaseH}
+	g := &Game{S: s, Net: n, Hotbar: NewHotbar(), SnapFrame: 30, w: BaseW, h: BaseH}
 	atlas := ebiten.NewImageFromImage(art.Atlas())
 	for id := 1; id < world.NumTiles(); id++ {
 		g.tiles[id] = atlas.SubImage(art.TileRect(world.TileID(id))).(*ebiten.Image)
@@ -75,32 +87,44 @@ func NewGame(s *Session, n *Net) *Game {
 	return g
 }
 
-// Script makes the player walk a fixed route, e.g. "W4,N2" (four steps west,
-// then two north), for snapshots. The snapshot is taken after it ends.
+// Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,A,Z60":
+// N/S/W/E<n> walk n steps, A places, B breaks, H<n> picks hotbar slot n,
+// Z<n> waits n ticks. The snapshot is taken after it ends.
 func (g *Game) Script(route string) error {
 	tps := ebiten.DefaultTPS
 	for _, part := range strings.Split(route, ",") {
 		part = strings.TrimSpace(part)
-		if part == "" {
+		switch {
+		case part == "":
+			continue
+		case part == "A":
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{A: true, Slot: -1}})
+			continue
+		case part == "B":
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{B: true, Slot: -1}})
 			continue
 		}
 		var c rune
 		var n int
 		if _, err := fmt.Sscanf(part, "%c%d", &c, &n); err != nil || n < 1 {
-			return fmt.Errorf("bad route step %q (want e.g. W4)", part)
+			return fmt.Errorf("bad script step %q (want e.g. W4, A, B, H2, Z60)", part)
+		}
+		switch c {
+		case 'H':
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Slot: n - 1}})
+			continue
+		case 'Z':
+			g.script = append(g.script, scriptStep{kind: scriptWait, n: n})
+			continue
 		}
 		d, ok := map[rune]world.Dir{'N': world.North, 'S': world.South, 'W': world.West, 'E': world.East}[c]
 		if !ok {
 			return fmt.Errorf("bad direction %q in %q", c, part)
 		}
-		hold := time.Duration(n)*StepDuration + TurnDelay
-		g.script = append(g.script, scriptStep{dir: d, ticks: int(hold*time.Duration(tps)/time.Second) + 1})
+		limit := 3*time.Duration(n)*StepDuration + time.Second
+		g.script = append(g.script, scriptStep{kind: scriptWalk, dir: d, n: n, budget: int(limit * time.Duration(tps) / time.Second)})
 	}
-	total := 0
-	for _, s := range g.script {
-		total += s.ticks
-	}
-	g.SnapFrame = total + 30
+	g.SnapFrame = math.MaxInt // taken 30 frames after the script ends
 	return nil
 }
 
@@ -130,18 +154,82 @@ func (g *Game) Update() error {
 	}
 	g.frame++ // counts frames since joining, so scripts and snapshots wait for the server
 
-	g.Input.ScriptHeld = false
-	if len(g.script) > 0 {
-		g.Input.ScriptDir, g.Input.ScriptHeld = g.script[0].dir, true
-		if g.script[0].ticks--; g.script[0].ticks <= 0 {
-			g.script = g.script[1:]
+	g.Input.Scripted = len(g.script) > 0
+	var st *scriptStep
+	if g.Input.Scripted {
+		st = &g.script[0]
+		g.Input.ScriptHeld = false
+		switch st.kind {
+		case scriptButton:
+			if !g.S.Me.Moving() {
+				g.Input.ScriptBtn = st.btn
+				g.nextScriptStep()
+			}
+		case scriptWait:
+			if st.n--; st.n <= 0 {
+				g.nextScriptStep()
+			}
+		case scriptWalk:
+			g.Input.ScriptDir, g.Input.ScriptHeld = st.dir, true
 		}
 	}
-	dir, held := g.Input.Poll(NewDpad(g.w, g.h))
-	if m, ok := g.S.Me.Update(dt, dir, held); ok && g.Net != nil {
+	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
+	dir, held := g.Input.Poll(pads.Dpad)
+	m, sent := g.S.Me.Update(dt, dir, held)
+	if sent && g.Net != nil {
 		g.Net.Send(&proto.Move{Dir: m.Dir, Seq: m.Seq})
 	}
+	if st != nil && st.kind == scriptWalk {
+		if sent {
+			st.n--
+		}
+		if st.budget--; st.n <= 0 || st.budget <= 0 {
+			g.nextScriptStep()
+		}
+	}
+
+	b := g.Input.PollButtons(pads)
+	g.Hotbar.Select(b.Slot)
+	if b.Next {
+		g.Hotbar.Next()
+	}
+	if b.Prev {
+		g.Hotbar.Prev()
+	}
+	for _, act := range []struct {
+		pressed bool
+		a       Action
+	}{{b.A, ActionPlace}, {b.B, ActionBreak}} {
+		if !act.pressed {
+			continue
+		}
+		if e, ok := g.S.EditFor(act.a, g.Hotbar.Selected()); ok {
+			g.sendEdit(e)
+		}
+	}
 	return nil
+}
+
+func (g *Game) nextScriptStep() {
+	g.script = g.script[1:]
+	if len(g.script) == 0 {
+		g.SnapFrame = g.frame + 30
+	}
+}
+
+// sendEdit sends an edit to the server, whose TileUpdate will change the map.
+// Offline, the edit applies directly, mirroring the server's rule that a
+// broken floor leaves dirt.
+func (g *Game) sendEdit(e *proto.Edit) {
+	if g.Net != nil {
+		g.Net.Send(e)
+		return
+	}
+	tile := e.Tile
+	if tile == world.None && e.Layer == world.Ground {
+		tile = world.Dirt
+	}
+	g.S.Apply(&proto.TileUpdate{X: e.X, Y: e.Y, Layer: e.Layer, Tile: tile})
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -189,8 +277,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		drawNameTag(screen, DisplayName(r.Name), int(math.Round(sx))+art.Tile/2, int(math.Round(sy))-2)
 	}
 
+	if t := g.S.Target(); g.S.CanBuildAt(t) {
+		cx, cy := cam.ToScreen(float64(t.X*art.Tile), float64(t.Y*art.Tile))
+		vector.StrokeRect(screen, float32(math.Round(cx))+0.5, float32(math.Round(cy))+0.5, art.Tile-1, art.Tile-1, 1, cursorColor, false)
+	}
+
+	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
+	g.drawHotbar(screen, pads)
 	if g.ShowDpad || g.Input.TouchSeen() {
-		drawDpad(screen, NewDpad(g.w, g.h))
+		drawDpad(screen, pads.Dpad)
+		drawButton(screen, pads.A, "A")
+		drawButton(screen, pads.B, "B")
 	}
 
 	if g.SnapPath != "" && g.frame >= g.SnapFrame && !g.snapped {
@@ -206,7 +303,32 @@ func (g *Game) drawSprite(screen *ebiten.Image, cam Camera, x, y float64, facing
 	screen.DrawImage(g.player[facing][frame], &op)
 }
 
-var tagBack = color.NRGBA{0x1b, 0x14, 0x10, 0xb0}
+var (
+	tagBack     = color.NRGBA{0x1b, 0x14, 0x10, 0xb0}
+	cursorColor = color.NRGBA{0xff, 0xf4, 0xd6, 0xe0}
+	slotBack    = color.NRGBA{0x1b, 0x14, 0x10, 0xa0}
+	slotPick    = color.NRGBA{0xe8, 0xc5, 0x6a, 0xff}
+)
+
+func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
+	var op ebiten.DrawImageOptions
+	for i, r := range p.Hotbar {
+		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotBack, false)
+		op.GeoM.Reset()
+		op.GeoM.Translate(float64(r.Min.X+(r.Dx()-art.Tile)/2), float64(r.Min.Y+(r.Dy()-art.Tile)/2))
+		screen.DrawImage(g.tiles[g.Hotbar.Slots[i]], &op)
+		if i == g.Hotbar.Index() {
+			vector.StrokeRect(screen, float32(r.Min.X)+1, float32(r.Min.Y)+1, float32(r.Dx())-2, float32(r.Dy())-2, 2, slotPick, false)
+		}
+	}
+}
+
+func drawButton(screen *ebiten.Image, r image.Rectangle, label string) {
+	cx, cy := float32(r.Min.X+r.Dx()/2), float32(r.Min.Y+r.Dy()/2)
+	vector.FillCircle(screen, cx, cy, float32(r.Dx()/2), padFill, true)
+	vector.StrokeCircle(screen, cx, cy, float32(r.Dx()/2), 1, padEdge, true)
+	ebitenutil.DebugPrintAt(screen, label, int(cx)-3, int(cy)-8)
+}
 
 // drawNameTag centres name above (cx, bottom) on a dark plate. The debug
 // font is 6×16 px per glyph, with the glyph in the plate's middle rows.

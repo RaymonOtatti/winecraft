@@ -14,6 +14,10 @@ const (
 	StepDuration = 200 * time.Millisecond
 	TurnDelay    = 90 * time.Millisecond // a tap shorter than this only turns
 	hopArc       = 8                     // pixels a ledge hop rises
+
+	// slack absorbs the rounding of a 60 Hz tick (16,666,666 ns): twelve
+	// ticks fall 8 ns short of 200 ms and would otherwise cost a thirteenth.
+	slack = 100 * time.Microsecond
 )
 
 // Move is a step attempt to send to the server.
@@ -54,7 +58,7 @@ func (w *Walker) Update(dt time.Duration, dir world.Dir, held bool) (Move, bool)
 	arrived := false
 	if w.moving {
 		w.elapsed += dt
-		if w.elapsed < w.dur {
+		if w.elapsed+slack < w.dur {
 			return Move{}, false
 		}
 		w.moving, w.elapsed = false, 0
