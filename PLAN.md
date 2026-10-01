@@ -164,7 +164,22 @@ IG boundaries are published only as vertex lists in the official resolutions (e.
 - The whole valley's *terrain* is generated from the pipeline on day one, which is cheap. *Content density* (NPCs, quests, interiors) is built **zone by zone**, so the world is big from the first release and fills in over time.
 - The client streams chunks around the player. The server keeps hot chunks in memory and the rest on disk.
 
-### 4.5 Travel
+### 4.5 Gathering zones beside the valley (B7.6, researched 2026-10-01)
+
+Two open zones, laid out schematically beside the dev valley in the right directions (the real geometry comes with the Phase 2 pipeline). Every material is real for its place; sources in Appendix C.7.
+
+| Zone | Real place | What you find (gatherable → item) |
+|---|---|---|
+| **West: Frente andino** | Cordón del Portillo (the wall of the central/south valley; Permian granite stocks), Cordón del Plata to the NW, Volcán Tupungato 6,570 m. Glaciar Tunuyán (57 km², the largest in the Central Andes) feeds the Río Tunuyán; the Las Tunas fan feeds Gualtallary | granite **cantos rodados** on gravel fans → *Canto*; river **sand** banks → *Arena*; **meltwater** springs below the ice → *Agua de deshielo*; **jarilla** (*Larrea divaricata*, 980–1,600 m: firewood, dye, daub) → *Jarilla* |
+| **East: Huayquerías → Oasis Este** | Huayquerías badlands SE of Tunuyán: Huayquerías Fm, late Miocene sandstones with **reddish silt**, 30–50 m walls, sparse jarilla/chañar/retamo, algarrobal on the plains; further east the oasis irrigated by the middle/lower Río Tunuyán (San Martín, Junín, Rivadavia) | **silt** banks → *Limo*; **algarrobo** and **chañar** (posts and beams) → *Poste*; **caña de Castilla** along the canals → *Caña*; **álamo** planted along canals (7–10 years to timber size) → *Rollizo*; **cortadera/totora** fiber → *Paja* |
+
+Not a zone: Payunia's basalt fields are ~311 km south (a later expedition). Not used: "Huayquerías clay" (no source confirms locals used it; the badlands are mostly sandstone and silt).
+
+**Hand recipes (B7.7), from traditional Mendoza building (Appendix C.7):** *Barro* = Limo + Agua · *Barro con paja* = Barro + Paja · *Adobe* = Barro con paja (molded, sun-dried) · *Cañizo* = Caña ×3 · *Quincha* (wall panel) = Poste + Cañizo + Barro · *Techo de torta* = Rollizo + Cañizo + Barro con paja · *Tablones* = Rollizo · *Cerca* = Poste ×2 (algarrobo was cut for posts) · *Cimiento de piedra* = Canto ×2 (stone footings against damp are documented; whole walls of piedra bola are not). Lime (cal) waits for a limestone source.
+
+**The crafting bench's tools (B8), from Mendoza's colonial and modern winemaking (Appendix C.7):** capacho (leather-lined harvest basket), lagar de cuero (hide hung on horcones, trodden by foot, 1740s), lagar de adobe, noque (leather must bucket), tinaja (earthenware lined with brea), botija (2-arroba jar wrapped in totora), odre (goat skin with brea), screw press, cement pileta (from the early 1900s); toneles of French oak were **imported** (from 1883), so they are traded, never gathered.
+
+### 4.6 Travel
 
 On foot (about 4 tiles/s), bike, a rural "micro" bus between real towns on a timetable, and a pickup truck once you own a bodega. Fast travel opens to bodegas and towns you've already visited.
 
@@ -602,6 +617,30 @@ Checked 2026-10-01 against the sources listed (source ids in Appendix C).
 | CC0 tilesets | https://kenney.nl/assets/tiny-town · https://opengameart.org/content/zelda-like-tilesets-and-sprites |
 | Pure-Go SQLite | https://pkg.go.dev/modernc.org/sqlite · https://github.com/ncruces/go-sqlite3 · https://sqlite.org/wal.html |
 | OSM PBF in Go | https://pkg.go.dev/github.com/paulmach/osm/osmpbf |
+
+### C.7 Gathering zones, traditional building, winemaking history (researched 2026-10-01)
+
+| Topic | Source |
+|---|---|
+| Cordillera Frontal geology, Cordón del Portillo Permian stocks | https://www.andeangeology.cl/index.php/revista1/article/view/2609/0 · https://ri.conicet.gov.ar/handle/11336/1003 |
+| Choiyoi Group | https://revistas.unal.edu.co/index.php/esrj/article/view/79515 |
+| Tupungato 6,570 m, andesite–dacite volcano | https://en.wikipedia.org/wiki/Tupungato · https://www.andeangeology.cl/index.php/revista1/article/view/V51n3-3726/html |
+| Tunuyán and Las Tunas fans, cantos with CaCO₃, soils | https://zuccardiwines.com/wp-content/uploads/2024/05/Zuccardi-Guia-Terroir-Valle-de-Uco-ESP.pdf · http://sedici.unlp.edu.ar/handle/10915/5245 |
+| Glaciers (Glaciar Tunuyán 57 km², rock glaciers) | https://www.glaciaresargentinos.gob.ar/wp-content/uploads/resultados_finales/informe_resumen_ejecutivo_APN_11-05-2018.pdf |
+| Río Tunuyán, Río Las Tunas | https://es.wikipedia.org/wiki/R%C3%ADo_Tunuy%C3%A1n · https://tupungato.gov.ar/wp-content/uploads/2022/07/2-Capitulo-No1.pdf |
+| Cordón del Plata drains mostly to the Río Mendoza | https://es.wikipedia.org/wiki/Cord%C3%B3n_del_Plata |
+| Plant belts (jarilla 980–1,600 m, Adesmia higher) | https://www.scielo.org.ar/scielo.php?script=sci_arttext&pid=S1851-23722011000200012 |
+| Jarilla uses | https://lamosquitera.org/nuestra-jarilla-noble-hermosa-y-util/ |
+| Huayquerías Fm (late Miocene sandstones, reddish silt), position SE of Tunuyán | https://lillo.org.ar/revis/opera-lilloana/v52/2019-opl-v52a08.pdf · https://www.lillo.org.ar/revis/opera-lilloana/v52/2019-opl-v52a19.pdf |
+| Huayquerías landform and plants | https://mendoza-camara.org/huayquerias-un-laberinto-de-paredones-de-arcilla/ |
+| Eastern oasis irrigated by the middle/lower Tunuyán | https://www.ina.gov.ar/archivos/publicaciones/CRA-RYD-2_Mirabile_Conductividad_Hidraulica.pdf |
+| Quincha, caña roofs, álamo/sauce, algarrobo/chañar posts, fibers | https://publicaciones.ucuenca.edu.ec/ojs/index.php/estoa/article/view/2876 · https://www.redalyc.org/journal/814/81475532002/movil/ |
+| Álamo silviculture in Mendoza | http://periodicohora25forestal.blogspot.com/2016/01/silvicultura-en-mendoza-la-produccion.html |
+| Adobe in Mendoza after 1861 | https://bdigital.uncu.edu.ar/objetos_digitales/8097/12-cirvini-rhaya.pdf |
+| Payunia (~311 km S, basalt) | https://en.wikipedia.org/wiki/Reserva_Provincial_La_Payunia |
+| Colonial winemaking: lagar de cuero, noque, capacho, tinajas | https://www.redalyc.org/journal/127/12765995002/12765995002.pdf · https://hportal.mendoza.edu.ar/la-vitivinicultura-en-mendoza/ · https://scielo.conicyt.cl/scielo.php?script=sci_arttext&pid=S0718-23762007000100011 |
+| From clay to wood vessels; French oak from 1883 | https://www.guarda14.com.ar/noticias/de-las-vasijas-de-barro-a-la-puntuacion-perfecta-mendoza-y-su-camino-por-el-vino |
+| Cement piletas in Mendoza | https://www.losandes.com.ar/vasijas-de-hormigon-armado-mas-de-un-siglo-de-vigencia |
 
 ### C.6 AI chat backends and safety (researched 2026-10-01)
 
