@@ -28,11 +28,11 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* determinism test (hash); the spawn is walkable; the sandbox can be reached from spawn (BFS test).
 
 ## B2 — Protocol (`internal/proto`, TDD)
-- [ ] **B2.1** Versioned binary messages: Hello{ver, name, joinCode, token}, Welcome{id, spawn, mapW, mapH}, Chunk{cx, cy, layers}, Move{dir, seq}, PlayerState{id, x, y, facing, name}, PlayerLeft{id}, Edit{x, y, layer, tile}, Inventory{items}, Error{code}. Length-prefixed, with a hard size cap.
+- [ ] **B2.1** Versioned binary messages: Hello{ver, name, joinCode, token}, Welcome{id, spawn, mapW, mapH}, Chunk{cx, cy, layers}, Move{dir, seq}, PlayerState{id, x, y, facing, name}, PlayerLeft{id}, Edit{x, y, layer, tile}, Inventory{items}, Ping{}, Error{code}. **One game message per WebSocket binary message** (the socket already frames it, so no length prefix): a 1-byte type, then fixed little-endian fields. A hard size cap, and every chunk message stays well under the 32 KiB default read limit.
   *Verify:* round-trip tests for every message, plus `go test -fuzz=FuzzDecode -fuzztime=30s` with no panics. The server faces the public internet, so this matters.
 
 ## B3 — Server (`cmd/server`)
-- [ ] **B3.1** HTTP: serve `web/` (index.html, wasm_exec.js, the wasm), `/healthz`, and WebSocket `/ws` behind a **join code**. One reader goroutine per connection; a 10 Hz world loop broadcasts state deltas.
+- [ ] **B3.1** HTTP: serve `web/` (index.html, wasm_exec.js, the wasm), `/healthz`, and WebSocket `/ws` behind a **join code**. One reader goroutine per connection; a 10 Hz world loop broadcasts state deltas. `SetReadLimit` explicitly on both ends. **Game-level heartbeat every ≤ 20 s** (the browser's WebSocket ping does nothing, and Cloudflare drops idle connections). Serve the wasm **gzip-compressed** (stdlib; it's ~14 MB raw). Trust `CF-Connecting-IP` only when the TCP peer is loopback, which is where cloudflared connects from.
   *Verify:* an httptest integration test where two clients connect and each sees the other's PlayerState; a wrong join code is rejected.
 - [ ] **B3.2** Authoritative movement: each step is validated against `world.CanStep` with at most 1 step per 150 ms; a rejected step snaps the client back.
   *Verify:* tests for a wall bump, a speed hack, and a ledge going up.
@@ -46,7 +46,7 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* `make snap` → read the PNG and check that the dev map renders.
 - [ ] **B4.2** Grid movement with smooth interpolation, facing, a 2-frame walk; arrows/WASD plus a **touch D-pad** in the browser; local prediction with server reconciliation.
   *Verify:* a snapshot after scripted moves; a manual browser check.
-- [ ] **B4.3** Networking: WebSocket in wasm and on desktop, Hello/Welcome, other players drawn with name tags, reconnect when the connection drops.
+- [ ] **B4.3** Networking: `coder/websocket` in wasm and on desktop. Dial and read in **goroutines** (blocking inside a JS callback deadlocks). Hello/Welcome, other players drawn with name tags, reconnect when the connection drops.
   *Verify:* the desktop client and a browser tab against the local server see each other (snapshot from each).
 - [ ] **B4.4** Building: face a tile; **A** places the selected hotbar tile, **B** breaks. A 5-slot hotbar.
   *Verify:* the edit appears on the second client (snapshot).

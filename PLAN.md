@@ -295,7 +295,12 @@ PvP (player against player) uses the same rules, so a deterministic shared Go `d
 
 **What Go costs**, and why Phase 1 is a spike with a hard gate: a larger `.wasm` download than a hand-written JS game, a single-threaded runtime in the browser, and garbage-collector pauses if per-frame allocations creep in. **If the spike fails its gate**, the fallback is a TypeScript client (PixiJS) speaking the same Go protocol. The server, simulation and pipeline stay Go either way.
 
-⟨verify with research: Ebitengine version, wasm sizes, mobile notes⟩
+**Checked 2026-10-01** (sources in Appendix C.5):
+
+- **Engine:** Ebitengine v2.10.4 (2026-09-25) needs Go 1.25+. We build with Go 1.26.4; the latest Go is 1.27.1. The web is an officially documented target and needs WebGL2. Touch input is built in, and iOS audio unlocks on the first tap.
+- **Download size:** a minimal Ebitengine tile program is **14.6 MB raw, 3.5 MB gzip, 2.5 MB brotli** (measured with Go 1.26.4). Our budget is about 4 MB brotli for the first playable, which is why the server must send the wasm compressed. TinyGo is not an option: Ebitengine closed that as "not planned".
+- **Networking:** `github.com/coder/websocket` compiles to wasm and wraps the browser WebSocket. A shipped Ebitengine game, bgammon, uses exactly this pair. Three rules for our code: (1) the read limit defaults to 32 KiB on both ends, so call `SetReadLimit` and keep chunks small; (2) never block inside a JS callback: dial and read in goroutines; (3) the browser can't set headers, so the join code and token travel in the first message, and the browser's `Ping` does nothing, so heartbeats are game messages.
+- **Unknowns the Phase 1 gate must measure:** frame rate on a current mid-range phone (the only public number is years old), startup time, and memory staying flat for 30 minutes (an old report traced a leak to this WebSocket library's previous version).
 
 ### 10.2 Repository layout
 
@@ -344,6 +349,7 @@ winecraft/
 |---|---|
 | Client frame time | ≤ 8 ms CPU on a mid-range Android phone and on an M-series Air, 60 fps |
 | First playable | ≤ 5 s on a 20 Mbps connection (wasm + first chunks) |
+| Wasm download | ≤ 4 MB brotli (a minimal Ebitengine program is 2.5 MB) |
 | Allocations per frame (steady state) | 0 |
 | Server tick at 200 players online | ≤ 5 ms |
 | Server footprint at 200 players | ≤ 1 CPU core, ≤ 512 MB RAM |
@@ -363,7 +369,9 @@ Your **home upload bandwidth** is the real ceiling on players online, not Go. Cl
   - data in `/mnt/fast_pool/compose/winecraft/data` only;
   - add the hostname as an **explicit** tunnel route. The `*.francomichetti.com` wildcard catch-all is still on your Cloudflare TODO list;
   - the admin endpoints (metrics, moderation) sit behind your SSO or Cloudflare Access; the game itself is public.
-- **WebSockets through Cloudflare:** send keepalive pings below the tunnel's idle timeout. Take the real client IP from `CF-Connecting-IP`, trusted only on the tunnel hop.
+- **WebSockets through Cloudflare:** they work on all plans, but Cloudflare drops idle connections and restarts its servers now and then. So: a game-level heartbeat every ≤ 30 s, and the client reconnects and resumes on its own.
+- **Real client IP:** Cloudflare sends `CF-Connecting-IP`, but Traefik's trusted-IP setting covers only `X-Forwarded-*`. Anyone who can reach Traefik directly could fake the header. Make Traefik reachable only from cloudflared, and have the server trust the header only from that hop.
+- **Caching the wasm:** Cloudflare compresses `application/wasm` but doesn't cache it by default, so it needs a Cache Rule. If asset traffic grows, the free-plan terms on "large files" point to moving assets to R2.
 - **Staging from Phase 3:** the same stack behind Cloudflare Access (only you and testers), so hosting problems show up early, not at launch.
 - **Backups and restore:** nightly SQLite backup plus ZFS snapshots. A restore drill is part of the launch gate.
 - **Ports:** none on the host. If a debug port is ever needed, check it against the full TCP and UDP listening set first and bind it to `127.0.0.1` only, per your NAS port rule.
@@ -385,7 +393,7 @@ The first playable target is a **vertical slice**: one zone at full detail, one 
 
 ### Phase 1 — Go/WASM spike (about a week)
 Ebitengine client to wasm: a 3-layer tilemap scrolling over a real 256×256-tile piece of the valley, 50 fake players moving, a WebSocket echo to a Go server **through a Cloudflare tunnel test hostname**, touch D-pad, iOS audio unlock.
-- **PASS when:** the §10.5 frame budget holds on your phone and the Air · first playable ≤ 5 s · zero steady-state allocations · round-trip time measured through the tunnel.
+- **PASS when:** the §10.5 frame budget holds on your phone, an iPhone and the Air · first playable ≤ 5 s · wasm ≤ 4 MB brotli · zero steady-state allocations · WebSocket round trips work in Chrome, Android and iOS Safari through the tunnel, with memory flat over 30 minutes · reconnect after a dropped connection works.
 - **NOT-PASS →** switch the client to TypeScript + PixiJS on the same Go server and protocol. Write it up in a decision record.
 
 ### Phase 2 — World pipeline
@@ -427,7 +435,9 @@ Zone after zone: content, NPCs, interiors, medal, species. Whites and rosé. Rea
 |---|---|
 | Go/WASM too heavy or slow on phones | Phase 1 hard gate; PixiJS fallback on the same Go backend |
 | **Pixel art is the largest cost**: someone has to draw hundreds of tiles and sprites | CC0 tilesets for the spike and slice; budget for an artist, or decide to draw; one consistent palette |
-| Nintendo IP: their lawyers are aggressive and they hold patents on some mechanics | No Pokémon names, art or trade dress; our own names (Ampelodex, Medallas, Duelo de Cata); no throw-to-capture mechanics; see the research note |
+| Nintendo IP: patents on specific mechanics, trademarks on names | Nintendo's suit against Pocketpair (Palworld) rests on three Japanese patents: aiming and releasing a capture item at a creature in the field (JP7493117), choosing a capture item or fighting creature then aiming and releasing it (JP7545191), and seamless mount switching (JP7528390). A ruling is expected in November 2026. In the US, the creature-summoning patent (US 12,403,397) had all claims rejected in a non-final April 2026 decision; the mount-switching patent (US 12,409,387) was granted in September 2025. **WineCraft avoids all of these**: you collect by sampling and photographing, never by throwing an item; mounts (bike, truck) are entered and exited, never switched mid-motion. No Pokémon names (no "Pokédex"), no art, no trade dress. Turn-based duels, collections and medals are genre mechanics. Re-check after the November ruling. Not legal advice |
+| Asset licenses | CC0 assets only (e.g., Kenney Tiny Town, ArMM1998 Zelda-like, both 16×16 CC0), or attribution tracked. **No share-alike assets** (LPC is CC-BY-SA/GPL and 32×32 anyway) |
+| SQLite on the NAS | One writer at a time, and the database on local disk, never on an SMB/NFS share (WAL mode doesn't work over network filesystems) |
 | Real wineries and people | Factual cards only, with sources; no speaking real people without consent; contact the hero bodegas early, since this is good marketing for them |
 | Data licenses (ODbL share-alike, GBIF per-record licenses) | Attribution screen; publish the derived world data under ODbL; CC0/CC-BY records only |
 | Prices go stale (inflation) | Store USD + date; staleness job; ARS shown only as a dated conversion |
@@ -543,6 +553,29 @@ Checked 2026-10-01 against the sources listed (source ids in Appendix C).
 | O1 | OIV maximum acceptable limits — https://www.oiv.int/standards/international-code-of-oenological-practices/annexes/maximum-acceptable-limits |
 | U1 | Penn State Extension, wine production — https://extension.psu.edu/food-safety-and-quality/grape-and-wine-production/wine-production |
 | U2 | Oregon State Extension, malolactic — https://extension.oregonstate.edu/food/wine-beer/conducting-successful-malolactic-fermentation |
+
+### C.5 Go, WebAssembly, hosting, IP
+
+| Topic | Source |
+|---|---|
+| Ebitengine v2.10 | https://ebitengine.org/en/blog/v2.10.0.html · https://github.com/hajimehoshi/ebiten/releases · https://ebitengine.org/en/documents/webassembly.html |
+| TinyGo not planned | https://github.com/hajimehoshi/ebiten/issues/747 |
+| Go releases | https://go.dev/doc/devel/release · https://go.dev/doc/go1.26 · https://go.dev/doc/go1.27 |
+| coder/websocket (wasm client) | https://pkg.go.dev/github.com/coder/websocket · https://github.com/coder/websocket/blob/master/ws_js.go |
+| bgammon (shipped Ebitengine + coder/websocket) | https://codeberg.org/tslocum/boxcars/src/branch/main/go.mod |
+| Wasm size with brotli | https://www.tqdev.com/2024-using-brotli-to-deliver-smaller-wasm-files/ |
+| Browser memory issue | https://github.com/hajimehoshi/ebiten/issues/1497 |
+| Cloudflare WebSockets | https://developers.cloudflare.com/network/websockets/ |
+| Cloudflare headers | https://developers.cloudflare.com/fundamentals/reference/http-headers/ |
+| Cloudflare cache defaults and compression | https://developers.cloudflare.com/cache/concepts/default-cache-behavior/ · https://developers.cloudflare.com/speed/optimization/content/compression/ |
+| Cloudflare service terms | https://www.cloudflare.com/service-specific-terms-application-services/ |
+| Traefik entrypoints (trustedIPs) | https://doc.traefik.io/traefik/reference/install-configuration/entrypoints/ |
+| Nintendo v. Pocketpair patents | https://gamesfray.com/two-of-nintendos-three-patents-in-suit-against-pocketpair-relate-to-collecting-characters-lets-look-at-the-claims/ · https://www.techdirt.com/2026/07/02/the-nintendo-palworld-patent-suit-appears-to-be-heading-for-a-muted-conclusion/ |
+| US patents | https://www.pcgamer.com/gaming-industry/us-patent-office-revokes-nintendos-controversial-pokemon-battling-patent-in-nonfinal-decision/ · https://thisweekinvideogames.com/news/nintendo-pokemon-company-us-patent-filings-creature-summoning-riding/ |
+| Pokémon trademarks | https://www.pokemon.com/us/legal/ |
+| CC0 tilesets | https://kenney.nl/assets/tiny-town · https://opengameart.org/content/zelda-like-tilesets-and-sprites |
+| Pure-Go SQLite | https://pkg.go.dev/modernc.org/sqlite · https://github.com/ncruces/go-sqlite3 · https://sqlite.org/wal.html |
+| OSM PBF in Go | https://pkg.go.dev/github.com/paulmach/osm/osmpbf |
 
 ### C.4 Economy
 
