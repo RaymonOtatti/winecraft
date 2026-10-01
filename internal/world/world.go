@@ -1,5 +1,12 @@
 package world
 
+import (
+	"cmp"
+	"crypto/sha256"
+	"encoding/binary"
+	"slices"
+)
+
 // ChunkSize is the width and height of a chunk in tiles. It must stay a
 // power of two: ChunkOf relies on shifts and masks.
 const (
@@ -71,3 +78,32 @@ func (w *World) Chunk(cc ChunkCoord) *Chunk { return w.chunks[cc] }
 
 // ChunkCount returns how many chunks hold data.
 func (w *World) ChunkCount() int { return len(w.chunks) }
+
+// Digest hashes every chunk in a fixed order (by Y, then X), so two worlds
+// with the same tiles always produce the same digest.
+func (w *World) Digest() [sha256.Size]byte {
+	coords := make([]ChunkCoord, 0, len(w.chunks))
+	for cc := range w.chunks {
+		coords = append(coords, cc)
+	}
+	slices.SortFunc(coords, func(a, b ChunkCoord) int {
+		if a.Y != b.Y {
+			return cmp.Compare(a.Y, b.Y)
+		}
+		return cmp.Compare(a.X, b.X)
+	})
+	h := sha256.New()
+	var buf [2]byte
+	for _, cc := range coords {
+		binary.Write(h, binary.LittleEndian, cc)
+		for l := range w.chunks[cc].Layers {
+			for _, t := range w.chunks[cc].Layers[l] {
+				binary.LittleEndian.PutUint16(buf[:], uint16(t))
+				h.Write(buf[:])
+			}
+		}
+	}
+	var out [sha256.Size]byte
+	h.Sum(out[:0])
+	return out
+}

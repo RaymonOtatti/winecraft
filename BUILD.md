@@ -24,7 +24,7 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* `go test ./internal/world/...` covers borders and negatives.
 - [x] **B1.2** Movement rules: `CanStep(from, dir)` blocks on solid objects and water; **ledges are one-way** (hop down, not up, Pokémon style).
   *Verify:* table tests per direction and ledge case.
-- [ ] **B1.3** Deterministic DEV MAP, about 96×96: vine rows, a dirt road, a stream with a bridge, a small plaza, a fenced **sandbox build zone**, and a ledge band. Same seed → same bytes.
+- [x] **B1.3** Deterministic DEV MAP, about 96×96: vine rows, a dirt road, a stream with a bridge, a small plaza, a fenced **sandbox build zone**, and a ledge band. Same seed → same bytes.
   *Verify:* determinism test (hash); the spawn is walkable; the sandbox can be reached from spawn (BFS test).
 
 ## B2 — Protocol (`internal/proto`, TDD)
@@ -81,3 +81,4 @@ Nothing gets pushed to any remote until Franco says so.
 - 2026-10-01 · B0.2 · `Makefile` with test (-race), vet, fuzz, wasm, size, run, client, snap, share, clean · `make test` exit 0 · see commit
 - 2026-10-01 · B1.1 · `internal/world`: 17-tile registry (vines not breakable), 32×32 chunks as flat `[2][1024]uint16`, `ChunkCoord` integer keys, shift/mask `ChunkOf` · `go test -race ./internal/world/...` 6/6 pass (borders, negatives, layers, no alloc on read) · see commit
 - 2026-10-01 · B1.2 · `world.CanStep` (walls, water, vines, void block; `LedgeSouth` hop lands 2 tiles south, no climbing, no walking along, landing must be free) + `Dir` · `go test -race ./internal/world/...` 10/10 pass · see commit
+- 2026-10-01 · B1.3 · `GenerateDevMap(seed)`: 96×96 placeholder (poplar border, ledge band y=30 with a road gap, two vineyard blocks, stream with 2 bridges, plaza spawn (47,47), fenced sandbox 24×13 with an east gate), `World.Digest()` · determinism (same seed same digest, different seed differs), spawn standable, sandbox + vine + ledge hop reachable by BFS over `CanStep`, no escape from bounds · 14/14 pass · see commit

@@ -25,7 +25,7 @@ func TestRegistryIsConsistent(t *testing.T) {
 	if Def(None).Walkable {
 		t.Fatal("None must not be walkable")
 	}
-	if Def(TileID(len(defs) + 5)).Name != "" {
+	if Def(TileID(len(defs)+5)).Name != "" {
 		t.Fatal("unknown ids must return the zero def")
 	}
 }
