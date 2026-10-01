@@ -11,6 +11,9 @@ import (
 // RegrowAfter is game tuning for the dev map, not a real-world fact.
 const RegrowAfter = 2 * time.Minute
 
+// MapRevealRadius is how many tiles the fog of war clears around the player.
+const MapRevealRadius = 5
+
 // GrapesPerHarvest is what one vine gives (from the tile registry).
 var GrapesPerHarvest = world.Def(world.Vine).GatherN
 
@@ -68,7 +71,8 @@ func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 	return Change{X: x, Y: y, Layer: world.Object, Tile: def.Spent}, nil
 }
 
-// Tick advances timed world changes (vines regrowing) and returns what changed.
+// Tick advances timed world changes (vines regrowing), clears fog of war
+// around each online player, and returns the world changes.
 func (s *State) Tick(now time.Time) []Change {
 	var out []Change
 	kept := s.regrow[:0]
@@ -83,7 +87,20 @@ func (s *State) Tick(now time.Time) []Change {
 		}
 	}
 	s.regrow = kept
+	s.revealFog()
 	return out
+}
+
+// revealFog clears the fog mask around every player. It is called from Tick,
+// which the server runs on its loop, so the server owns the authoritative map
+// and can save it.
+func (s *State) revealFog() {
+	for _, p := range s.players {
+		if p.Fog == nil {
+			p.Fog = world.NewFog(s.Map.Bounds)
+		}
+		p.Fog.Reveal(p.Pos.X, p.Pos.Y, MapRevealRadius)
+	}
 }
 
 // TakeInventoryChanges returns the players whose inventory changed since the

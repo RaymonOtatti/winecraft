@@ -34,7 +34,8 @@ type Player struct {
 	Seq       uint32 // last client move sequence applied
 	Inv       map[world.ItemID]int
 	Hotbar    [HotbarSlots]world.ItemID
-	QuestStep int // simple quest progression
+	QuestStep int      // simple quest progression
+	Fog       *world.Fog // discovered-tile mask, saved with the profile
 
 	token string // stable identity across reconnects and restarts; "" for anonymous
 
@@ -106,6 +107,10 @@ func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err erro
 	}
 	s.nextID++
 	p = &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int), Hotbar: DefaultHotbar, token: token}
+	p.Fog = world.NewFog(s.Map.Bounds)
+	if p.Fog != nil {
+		p.Fog.Reveal(p.Pos.X, p.Pos.Y, MapRevealRadius)
+	}
 	if prof, ok := s.profiles[token]; ok && token != "" {
 		p.Facing = prof.Facing
 		if pos := (world.Point{X: prof.X, Y: prof.Y}); s.Map.Bounds.Contains(pos.X, pos.Y) && s.Map.World.Standable(pos.X, pos.Y) {
@@ -118,6 +123,9 @@ func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err erro
 			p.Hotbar = prof.Hotbar
 		}
 		p.QuestStep = prof.QuestStep
+		if p.Fog != nil && len(prof.Fog) > 0 {
+			p.Fog.SetBytes(prof.Fog)
+		}
 	} else {
 		for it, n := range StarterKit {
 			p.Inv[it] = n

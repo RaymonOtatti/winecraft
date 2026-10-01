@@ -51,7 +51,8 @@ type Profile struct {
 	Facing    world.Dir
 	Inv       map[world.ItemID]int
 	Hotbar    [HotbarSlots]world.ItemID
-	QuestStep int `json:",omitempty"` // B8 quest progress; missing = 0
+	QuestStep int    `json:",omitempty"` // B8 quest progress; missing = 0
+	Fog       []byte `json:",omitempty"` // discovered-tile mask from world.Fog
 }
 
 var tokenRE = regexp.MustCompile(`^[0-9a-f]{32}$`)
@@ -67,7 +68,11 @@ func profileOf(p *Player) Profile {
 			inv[it] = n
 		}
 	}
-	return Profile{Name: p.Name, X: p.Pos.X, Y: p.Pos.Y, Facing: p.Facing, Inv: inv, Hotbar: p.Hotbar, QuestStep: p.QuestStep}
+	prof := Profile{Name: p.Name, X: p.Pos.X, Y: p.Pos.Y, Facing: p.Facing, Inv: inv, Hotbar: p.Hotbar, QuestStep: p.QuestStep}
+	if p.Fog != nil {
+		prof.Fog = p.Fog.Bytes()
+	}
+	return prof
 }
 
 // Save captures the game. Online players are saved as they are right now.

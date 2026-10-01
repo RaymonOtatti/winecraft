@@ -205,6 +205,9 @@ func (h *Hub) join(c *client, name, token string) error {
 		}
 	}
 	h.sendTo(c, &proto.Hotbar{Slots: p.Hotbar})
+	if p.Fog != nil {
+		h.sendTo(c, &proto.Map{Bounds: p.Fog.Bounds(), Bits: p.Fog.Bytes()})
+	}
 	h.cfg.Log.Info("player joined", "id", p.ID, "name", p.Name, "ip", c.ip, "online", len(h.clients))
 	return nil
 }
