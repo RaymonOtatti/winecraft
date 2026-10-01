@@ -461,6 +461,7 @@ Zone after zone: content, NPCs, interiors, medal, species. Whites and rosé. Rea
 | Go/WASM too heavy or slow on phones | Phase 1 hard gate; PixiJS fallback on the same Go backend |
 | **Pixel art is the largest cost**: someone has to draw hundreds of tiles and sprites | CC0 tilesets for the spike and slice; budget for an artist, or decide to draw; one consistent palette |
 | Nintendo IP: patents on specific mechanics, trademarks on names | Nintendo's suit against Pocketpair (Palworld) rests on three Japanese patents: aiming and releasing a capture item at a creature in the field (JP7493117), choosing a capture item or fighting creature then aiming and releasing it (JP7545191), and seamless mount switching (JP7528390). A ruling is expected in November 2026. In the US, the creature-summoning patent (US 12,403,397) had all claims rejected in a non-final April 2026 decision; the mount-switching patent (US 12,409,387) was granted in September 2025. **WineCraft avoids all of these**: you collect by sampling and photographing, never by throwing an item; mounts (bike, truck) are entered and exited, never switched mid-motion. No Pokémon names (no "Pokédex"), no art, no trade dress. Turn-based duels, collections and medals are genre mechanics. Re-check after the November ruling. Not legal advice |
+| In-game AI chat terms | Google Antigravity (`agy`) terms forbid use "in connection with products not provided by us" (account bans confirmed); the Gemini API forbids services likely used by under-18s. Use a local model on the NAS, or the paid Gemini API behind an 18+ gate; never agy for players. OWASP LLM Top 10 controls: no tools, server-side quest state, delimited player text, output caps, quotas, fixed-hint fallback |
 | Asset licenses | CC0 assets only (e.g., Kenney Tiny Town, ArMM1998 Zelda-like, both 16×16 CC0), or attribution tracked. **No share-alike assets** (LPC is CC-BY-SA/GPL and 32×32 anyway) |
 | SQLite on the NAS | One writer at a time, and the database on local disk, never on an SMB/NFS share (WAL mode doesn't work over network filesystems) |
 | Real wineries and people | Factual cards only, with sources; no speaking real people without consent; contact the hero bodegas early, since this is good marketing for them |
@@ -601,6 +602,15 @@ Checked 2026-10-01 against the sources listed (source ids in Appendix C).
 | CC0 tilesets | https://kenney.nl/assets/tiny-town · https://opengameart.org/content/zelda-like-tilesets-and-sprites |
 | Pure-Go SQLite | https://pkg.go.dev/modernc.org/sqlite · https://github.com/ncruces/go-sqlite3 · https://sqlite.org/wal.html |
 | OSM PBF in Go | https://pkg.go.dev/github.com/paulmach/osm/osmpbf |
+
+### C.6 AI chat backends and safety (researched 2026-10-01)
+
+| Topic | Source |
+|---|---|
+| Antigravity CLI (`agy`), headless mode, install | https://github.com/google-antigravity/antigravity-cli · https://antigravity.google/docs/cli/headless/ · https://antigravity.google/docs/cli/install/ |
+| Antigravity terms ("products not provided by us") | https://antigravity.google/terms/ · https://github.com/google-gemini/gemini-cli/discussions/20632 |
+| Gemini API terms (under-18 clause), pricing, safety settings | https://ai.google.dev/gemini-api/terms · https://ai.google.dev/gemini-api/docs/pricing · https://ai.google.dev/gemini-api/docs/safety-settings |
+| OWASP LLM Top 10 2025 (prompt injection, excessive agency, prompt leakage, output handling, unbounded consumption) | https://genai.owasp.org/llmrisk/llm01-prompt-injection/ · https://genai.owasp.org/llmrisk/llm062025-excessive-agency/ · https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/ · https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/ · https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/ |
 
 ### C.4 Economy (researched 2026-10-01)
 
