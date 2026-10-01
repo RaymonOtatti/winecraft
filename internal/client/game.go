@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -35,11 +36,14 @@ type Game struct {
 	SnapPath  string
 	SnapFrame int
 	Stay      time.Duration // keep playing this long after the snapshot (multi-client checks)
+	Bench     bool          // time each frame\'s Update+Draw and report on exit
 	ShowDpad  bool          // draw the touch D-pad even before a touch (snapshots)
 
 	toast      Toast
 	noticeSeen int
-	unjoined   int // frames spent before joining (a rejected client still snapshots)
+	unjoined   int             // frames spent before joining (a rejected client still snapshots)
+	frameCost  []time.Duration // Update+Draw per frame, when benchmarking
+	updateCost time.Duration
 
 	script  []scriptStep
 	tiles   [64]*ebiten.Image // sub-images of one atlas, so draws batch
@@ -134,6 +138,10 @@ func (g *Game) Script(route string) error {
 }
 
 func (g *Game) Update() error {
+	if g.Bench {
+		start := time.Now()
+		defer func() { g.updateCost = time.Since(start) }()
+	}
 	if g.snapped && !g.done && !time.Now().Before(g.quitAt) {
 		g.done = true
 	}
@@ -246,6 +254,10 @@ func (g *Game) send(m proto.Msg) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.Bench {
+		start := time.Now()
+		defer func() { g.frameCost = append(g.frameCost, g.updateCost+time.Since(start)) }()
+	}
 	screen.Fill(voidColor)
 	me := g.S.Me
 	px, py := me.DrawPos()
@@ -406,6 +418,27 @@ func (g *Game) Layout(outsideW, outsideH int) (int, int) {
 	s := PixelScale(outsideW, outsideH)
 	g.w, g.h = outsideW/s, outsideH/s
 	return g.w, g.h
+}
+
+// BenchReport summarizes the CPU time per frame (Update + Draw) recorded
+// with Bench: average, 95th percentile and worst, skipping the first 30
+// frames (start-up).
+func (g *Game) BenchReport() string {
+	c := g.frameCost
+	if len(c) > 30 {
+		c = c[30:]
+	}
+	if len(c) == 0 {
+		return "no frames"
+	}
+	s := slices.Clone(c)
+	slices.Sort(s)
+	var sum time.Duration
+	for _, d := range s {
+		sum += d
+	}
+	return fmt.Sprintf("%d frames, CPU per frame: avg %v, p95 %v, max %v",
+		len(s), sum/time.Duration(len(s)), s[len(s)*95/100], s[len(s)-1])
 }
 
 func savePNG(screen *ebiten.Image, path string) error {

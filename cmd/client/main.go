@@ -26,6 +26,7 @@ func main() {
 	walk := flag.String("walk", def.walk, `scripted route for snapshots, e.g. "W4,N2"`)
 	touch := flag.Bool("touch", false, "show the touch D-pad without a touch screen")
 	stay := flag.Duration("stay", 0, "keep playing this long after -snap before quitting")
+	bench := flag.Bool("bench", false, "report CPU time per frame on exit")
 	token := flag.String("token", def.token, `player token (32 hex); "auto" keeps one in your config dir, "" plays anonymously`)
 	flag.Parse()
 
@@ -53,6 +54,7 @@ func main() {
 	g.SnapPath = *snap
 	g.ShowDpad = *touch
 	g.Stay = *stay
+	g.Bench = *bench
 	if *walk != "" {
 		if err := g.Script(*walk); err != nil {
 			log.Fatal(err)
@@ -64,6 +66,9 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	if err := ebiten.RunGame(g); err != nil && !errors.Is(err, ebiten.Termination) {
 		log.Fatal(err)
+	}
+	if *bench {
+		fmt.Println(g.BenchReport())
 	}
 }
 
