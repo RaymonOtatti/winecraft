@@ -54,6 +54,7 @@ type Game struct {
 	craft   CraftPanel
 	chat    ChatPanel
 	player  [4][2]*ebiten.Image
+	others  []*Remote         // reused each frame for y-sorting remote players
 	w, h    int
 	frame   int
 	snapped bool
@@ -395,22 +396,23 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Everyone else first (sorted by y so lower sprites overlap higher ones),
-	// then us on top, then the name tags over all sprites.
-	others := make([]*Remote, 0, len(g.S.Players))
+	// then us on top, then the name tags over all sprites. Reuse the slice
+	// buffer to avoid an allocation every frame.
+	g.others = g.others[:0]
 	for _, r := range g.S.Players {
-		others = append(others, r)
+		g.others = append(g.others, r)
 	}
-	sort.Slice(others, func(i, j int) bool {
-		_, yi := others[i].DrawPos()
-		_, yj := others[j].DrawPos()
-		return yi < yj || (yi == yj && others[i].ID < others[j].ID)
+	sort.Slice(g.others, func(i, j int) bool {
+		_, yi := g.others[i].DrawPos()
+		_, yj := g.others[j].DrawPos()
+		return yi < yj || (yi == yj && g.others[i].ID < g.others[j].ID)
 	})
-	for _, r := range others {
+	for _, r := range g.others {
 		rx, ry := r.DrawPos()
 		g.drawSprite(screen, cam, rx, ry, r.Facing, r.Frame())
 	}
 	g.drawSprite(screen, cam, px, py, me.Facing, me.Frame())
-	for _, r := range others {
+	for _, r := range g.others {
 		rx, ry := r.DrawPos()
 		sx, sy := cam.ToScreen(rx, ry)
 		drawNameTag(screen, DisplayName(r.Name), int(math.Round(sx))+art.Tile/2, int(math.Round(sy))-2)
