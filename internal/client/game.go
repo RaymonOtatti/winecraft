@@ -57,6 +57,7 @@ type Game struct {
 	others  []*Remote         // reused each frame for y-sorting remote players
 	hud     *HUDCache         // cached top/help status layer
 	mm      *HUDCache         // cached minimap image
+	hotbar  *HUDCache         // cached hotbar layer
 	w, h    int
 	frame   int
 	snapped bool
@@ -92,7 +93,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH, chat: ChatPanel{}, craft: CraftPanel{}, hud: NewHUDCache(), mm: NewHUDCache()}
+	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH, chat: ChatPanel{}, craft: CraftPanel{}, hud: NewHUDCache(), mm: NewHUDCache(), hotbar: NewHUDCache()}
 	icons := ebiten.NewImageFromImage(art.Items())
 	for id := 1; id < world.NumItems(); id++ {
 		g.icons[id] = icons.SubImage(art.ItemRect(world.ItemID(id))).(*ebiten.Image)
@@ -433,7 +434,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	panelOpen := g.panel.Open || g.craft.Open || g.chat.Open
 	if g.S.Joined {
 		if !panelOpen {
-			g.drawHotbar(screen, pads)
+			g.drawHotbarCached(screen, pads)
 		}
 		if g.panel.Open {
 			g.drawPanel(screen)
@@ -475,23 +476,38 @@ var (
 	slotPick    = color.NRGBA{0xe8, 0xc5, 0x6a, 0xff}
 )
 
-func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
-	var op ebiten.DrawImageOptions
-	for i, r := range p.Hotbar {
-		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotBack, false)
-		op.GeoM.Reset()
-		op.GeoM.Translate(float64(r.Min.X+(r.Dx()-art.Tile)/2), float64(r.Min.Y+(r.Dy()-art.Tile)/2))
-		if it := g.S.Hotbar.Slots[i]; it != world.ItemNone && g.icons[it] != nil {
-			screen.DrawImage(g.icons[it], &op)
-		}
-		if g.Net != nil {
-			n := fmt.Sprint(g.S.CountFor(g.S.Hotbar.Slots[i]))
-			ebitenutil.DebugPrintAt(screen, n, r.Max.X-6*len(n)-1, r.Max.Y-14)
-		}
-		if i == g.S.Hotbar.Index() {
-			vector.StrokeRect(screen, float32(r.Min.X)+1, float32(r.Min.Y)+1, float32(r.Dx())-2, float32(r.Dy())-2, 2, slotPick, false)
-		}
+func (g *Game) drawHotbarCached(screen *ebiten.Image, p Pads) {
+	if len(p.Hotbar) == 0 {
+		return
 	}
+	// Hash everything that changes the hotbar's appearance.
+	parts := []string{
+		fmt.Sprint(g.w), fmt.Sprint(g.h),
+		fmt.Sprint(g.S.Hotbar.Index()),
+		fmt.Sprint(g.Net != nil),
+	}
+	for i, it := range g.S.Hotbar.Slots {
+		parts = append(parts, fmt.Sprintf("%d:%d:%d", i, it, g.S.CountFor(it)))
+	}
+	gen := HUDHash(parts...)
+	g.hotbar.Draw(screen, gen, func(dst *ebiten.Image) {
+		var op ebiten.DrawImageOptions
+		for i, r := range p.Hotbar {
+			vector.FillRect(dst, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotBack, false)
+			op.GeoM.Reset()
+			op.GeoM.Translate(float64(r.Min.X+(r.Dx()-art.Tile)/2), float64(r.Min.Y+(r.Dy()-art.Tile)/2))
+			if it := g.S.Hotbar.Slots[i]; it != world.ItemNone && g.icons[it] != nil {
+				dst.DrawImage(g.icons[it], &op)
+			}
+			if g.Net != nil {
+				n := fmt.Sprint(g.S.CountFor(g.S.Hotbar.Slots[i]))
+				ebitenutil.DebugPrintAt(dst, n, r.Max.X-6*len(n)-1, r.Max.Y-14)
+			}
+			if i == g.S.Hotbar.Index() {
+				vector.StrokeRect(dst, float32(r.Min.X)+1, float32(r.Min.Y)+1, float32(r.Dx())-2, float32(r.Dy())-2, 2, slotPick, false)
+			}
+		}
+	})
 }
 
 var dim = color.NRGBA{0x1b, 0x14, 0x10, 0xc8}
