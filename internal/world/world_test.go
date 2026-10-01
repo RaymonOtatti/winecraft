@@ -107,3 +107,14 @@ func TestReadingMissingChunksDoesNotAllocate(t *testing.T) {
 		t.Fatal("reading must not create chunks")
 	}
 }
+
+func TestPutChunkCopiesTheLayers(t *testing.T) {
+	w := New()
+	var layers [NumLayers][ChunkSize * ChunkSize]TileID
+	layers[Ground][2*ChunkSize+1] = Sand
+	w.PutChunk(ChunkCoord{X: -1, Y: 0}, &layers)
+	layers[Ground][2*ChunkSize+1] = Water // later changes to the source must not leak in
+	if got := w.At(Ground, -32+1, 2); got != Sand {
+		t.Fatalf("At = %d, want Sand", got)
+	}
+}

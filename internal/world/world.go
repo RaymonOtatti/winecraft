@@ -73,6 +73,17 @@ func (w *World) put(l Layer, x, y int, t TileID) {
 	c.Layers[l][ly*ChunkSize+lx] = t
 }
 
+// PutChunk replaces the chunk at cc with a copy of layers (a client loading
+// what the server sent).
+func (w *World) PutChunk(cc ChunkCoord, layers *[NumLayers][ChunkSize * ChunkSize]TileID) {
+	c := w.chunks[cc]
+	if c == nil {
+		c = new(Chunk)
+		w.chunks[cc] = c
+	}
+	c.Layers = *layers
+}
+
 // Chunk returns the chunk at cc, or nil if nothing was ever written there.
 func (w *World) Chunk(cc ChunkCoord) *Chunk { return w.chunks[cc] }
 

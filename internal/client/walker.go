@@ -127,6 +127,14 @@ func (w *Walker) Reconcile(server world.Point, facing world.Dir, ack uint32) {
 	}
 }
 
+// Reset puts the walker at pos, at rest, forgetting unconfirmed moves (a new
+// Welcome after a reconnect: the server's state starts over).
+func (w *Walker) Reset(pos world.Point) {
+	w.Pos, w.from = pos, pos
+	w.moving, w.elapsed, w.turning, w.held, w.bumpSent = false, 0, false, 0, false
+	w.pending = w.pending[:0]
+}
+
 // PendingMoves is how many sent moves the server has not confirmed.
 func (w *Walker) PendingMoves() int { return len(w.pending) }
 
