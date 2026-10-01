@@ -57,6 +57,15 @@ for _ in $(seq 60); do
 done
 [ -n "$URL" ] || { echo "The tunnel did not come up:"; tail -20 "$LOGS/tunnel.log"; exit 1; }
 
+# Wait until the new name is in public DNS before printing it. Asking 1.1.1.1
+# directly keeps this Mac's resolver from caching a "not found" answer, which
+# would break the link here for minutes even after it works everywhere else.
+HOST=${URL#https://}
+for _ in $(seq 60); do
+	[ -n "$(dig +short "$HOST" @1.1.1.1 2>/dev/null)" ] && break
+	sleep 1
+done
+
 # Keep the Mac awake while the server runs (it would sleep after a minute idle).
 caffeinate -i -w "${PIDS[0]}" &
 PIDS+=($!)
