@@ -127,6 +127,12 @@ func init() {
 			c.rect(6, 10, 10, 11, woodBase)
 			c.outline()
 		},
+		world.TimberPoplarStump: func(c *cell) {
+			c.rect(6, 10, 10, 14, trunk)
+			c.rect(6, 10, 10, 11, woodBase)
+			c.set(8, 9, timberLeaf) // a small sprout: timber poplars regrow to full trees
+			c.outline()
+		},
 		world.Cortadera: func(c *cell) {
 			for x := 3; x < 13; x += 2 {
 				for y := 6; y < 15; y++ {

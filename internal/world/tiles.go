@@ -39,6 +39,7 @@ const (
 	StoneWall
 	Rock
 	Crate
+	PoplarStump // gathered border poplar
 
 	// West zone ground: the Andean front (PLAN.md §4.5)
 	Gravel // alluvial fan gravel
@@ -65,10 +66,10 @@ const (
 	ChanarCut    //
 	CaneStand    // caña de Castilla along the canals
 	CaneCut      //
-	TimberPoplar // álamo planted for timber along canals
-	PoplarStump  //
-	Cortadera    // fiber for daub
-	CortaderaCut //
+	TimberPoplar      // álamo planted for timber along canals
+	TimberPoplarStump // gathered timber poplar
+	Cortadera         // fiber for daub
+	CortaderaCut      //
 
 	// Crafted building pieces (traditional Mendoza construction)
 	AdobeWall
@@ -118,7 +119,6 @@ var defs = func() [numTiles]TileDef {
 		Planks:        {ID: Planks, Name: "Tablones", Layer: Ground, Walkable: true, Breakable: true, Placeable: true, Drop: ItemPlanks},
 		Vine:          {ID: Vine, Name: "Vid", Layer: Object, Gather: ItemGrapes, GatherN: 2, Spent: VineHarvested},
 		VineHarvested: {ID: VineHarvested, Name: "Vid cosechada", Layer: Object, RegrowsTo: Vine},
-		Poplar:        {ID: Poplar, Name: "Álamo", Layer: Object},
 		Fence:         {ID: Fence, Name: "Cerca", Layer: Object, Breakable: true, Placeable: true, Drop: ItemFence},
 		StoneWall:     {ID: StoneWall, Name: "Cimiento de piedra", Layer: Object, Breakable: true, Placeable: true, Drop: ItemStone},
 		Rock:          {ID: Rock, Name: "Roca", Layer: Object, Breakable: true, Drop: ItemCanto},
@@ -147,7 +147,8 @@ var defs = func() [numTiles]TileDef {
 		{Algarrobo, AlgarroboCut, "Algarrobo", "Algarrobo podado", ItemPoste, 1},
 		{Chanar, ChanarCut, "Chañar", "Chañar podado", ItemPoste, 1},
 		{CaneStand, CaneCut, "Cañaveral", "Cañaveral cortado", ItemCana, 3},
-		{TimberPoplar, PoplarStump, "Álamo de corte", "Tocón de álamo", ItemRollizo, 1},
+		{TimberPoplar, TimberPoplarStump, "Álamo de corte", "Tocón cortado", ItemRollizo, 1},
+		{Poplar, PoplarStump, "Álamo", "Tocón de álamo", ItemRollizo, 1},
 		{Cortadera, CortaderaCut, "Cortadera", "Cortadera cortada", ItemPaja, 2},
 	} {
 		d[g.id], d[g.spent] = gatherable(g.id, g.spent, g.name, g.spentName, g.it, g.n)

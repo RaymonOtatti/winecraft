@@ -77,6 +77,34 @@ func TestHarvestNeedsAVineWithinReach(t *testing.T) {
 	}
 }
 
+func TestHarvestPoplarGivesWoodAndRegrows(t *testing.T) {
+	s, p := editor(t)
+	// The editor map places a Poplar at (5,6), one tile south of spawn.
+	ch, err := s.Harvest(p.ID, 5, 6, t0)
+	if err != nil {
+		t.Fatalf("harvesting the poplar next to you: %v", err)
+	}
+	if ch != (Change{X: 5, Y: 6, Layer: world.Object, Tile: world.PoplarStump}) || s.Map.World.At(world.Object, 5, 6) != world.PoplarStump {
+		t.Fatalf("poplar must become a stump: change %+v", ch)
+	}
+	if p.Inv[world.ItemRollizo] != 1 {
+		t.Fatalf("rollizo: %d, want 1", p.Inv[world.ItemRollizo])
+	}
+	if _, err := s.Harvest(p.ID, 5, 6, t0.Add(time.Second)); !errors.Is(err, ErrNotAllowed) {
+		t.Fatalf("a harvested poplar has no wood left: err %v", err)
+	}
+	regrow := s.Tick(t0.Add(RegrowAfter))
+	found := false
+	for _, c := range regrow {
+		if c == (Change{X: 5, Y: 6, Layer: world.Object, Tile: world.Poplar}) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("poplar must regrow, got %+v", regrow)
+	}
+}
+
 func TestVinesRegrowOnATimer(t *testing.T) {
 	s, p := editor(t)
 	s.Harvest(p.ID, 6, 5, t0)
