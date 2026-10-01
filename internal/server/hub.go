@@ -30,6 +30,8 @@ type Config struct {
 	MsgBurst     int           // client message burst; default 100
 	FailInterval time.Duration // a wrong join code is forgiven after this long; default 30 s
 	FailBurst    int           // wrong join codes per IP before a lockout; default 5
+	Store        game.Store    // where the game is saved; nil keeps nothing between runs
+	SaveEvery    time.Duration // save interval; default 30 s
 	Log          *slog.Logger
 }
 
@@ -50,6 +52,7 @@ func (c *Config) defaults() {
 	def(&c.HelloTimeout, 10*time.Second)
 	def(&c.MsgInterval, 20*time.Millisecond)
 	def(&c.FailInterval, 30*time.Second)
+	def(&c.SaveEvery, 30*time.Second)
 	defInt(&c.SendBuffer, 512)
 	defInt(&c.MaxPerIP, 4)
 	defInt(&c.MsgBurst, 100)
@@ -76,6 +79,7 @@ type Hub struct {
 type joinReq struct {
 	c     *client
 	name  string
+	token string
 	reply chan error
 }
 
@@ -102,22 +106,50 @@ func NewHub(state *game.State, cfg Config) *Hub {
 // Online returns the number of connected players.
 func (h *Hub) Online() int { return int(h.online.Load()) }
 
-// Run is the game loop. It returns when ctx is cancelled, closing every
-// connection.
+// Run is the game loop. It returns when ctx is cancelled, after saving the
+// game and closing every connection.
 func (h *Hub) Run(ctx context.Context) {
 	defer close(h.done)
 	tick := time.NewTicker(h.cfg.Tick)
 	defer tick.Stop()
+	save := time.NewTicker(h.cfg.SaveEvery)
+	defer save.Stop()
+
+	// Snapshots are taken here, on the game loop, so they are consistent;
+	// the slow part (writing the file) happens on the saver goroutine. If a
+	// write is still running, the newer snapshot replaces the waiting one.
+	pending := make(chan *game.Saved, 1)
+	saverDone := make(chan struct{})
+	go func() {
+		defer close(saverDone)
+		for sv := range pending {
+			h.write(sv)
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			close(pending)
+			<-saverDone
+			h.write(h.state.Save(time.Now())) // the final save, after any write in flight
 			for _, c := range h.clients {
 				// Close waits for the peer's reply; don't let one slow client hold up the rest.
 				go c.conn.Close(websocket.StatusGoingAway, "server shutting down")
 			}
 			return
+		case <-save.C:
+			if h.cfg.Store == nil {
+				continue
+			}
+			sv := h.state.Save(time.Now())
+			select { // drop an older snapshot still waiting; never block on it
+			case <-pending: // (the saver may have taken it a moment ago)
+			default:
+			}
+			pending <- sv // only this loop sends, so the slot is free now
 		case j := <-h.joins:
-			j.reply <- h.join(j.c, j.name)
+			j.reply <- h.join(j.c, j.name, j.token)
 		case c := <-h.leaves:
 			h.leave(c)
 		case in := <-h.inbound:
@@ -128,8 +160,26 @@ func (h *Hub) Run(ctx context.Context) {
 	}
 }
 
-func (h *Hub) join(c *client, name string) error {
-	p, err := h.state.Join(name)
+func (h *Hub) write(sv *game.Saved) {
+	if h.cfg.Store == nil {
+		return
+	}
+	if err := h.cfg.Store.Save(sv); err != nil {
+		h.cfg.Log.Error("saving the game failed", "err", err)
+	}
+}
+
+func (h *Hub) join(c *client, name, token string) error {
+	p, replaced, err := h.state.JoinAs(name, token)
+	if replaced != 0 { // the same player connected again elsewhere: close the old tab
+		if old := h.clients[replaced]; old != nil {
+			delete(h.clients, replaced)
+			close(old.send)
+			go old.conn.Close(websocket.StatusPolicyViolation, "connected elsewhere")
+			h.broadcast(&proto.PlayerLeft{ID: replaced})
+			h.cfg.Log.Info("player replaced", "old", replaced, "name", old.name)
+		}
+	}
 	if err != nil {
 		return err
 	}

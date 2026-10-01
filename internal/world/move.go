@@ -47,21 +47,21 @@ func (w *World) CanStep(x, y int, d Dir) (Step, bool) {
 			return Step{}, false
 		}
 		lx, ly := nx, ny+1
-		if w.At(Ground, lx, ly) == LedgeSouth || !w.standable(lx, ly) {
+		if w.At(Ground, lx, ly) == LedgeSouth || !w.Standable(lx, ly) {
 			return Step{}, false
 		}
 		return Step{X: lx, Y: ly, Hop: true}, true
 	}
 
-	if !w.standable(nx, ny) {
+	if !w.Standable(nx, ny) {
 		return Step{}, false
 	}
 	return Step{X: nx, Y: ny}, true
 }
 
-// standable reports whether a player can occupy (x, y): walkable ground and
+// Standable reports whether a player can occupy (x, y): walkable ground and
 // either no object or a walkable one.
-func (w *World) standable(x, y int) bool {
+func (w *World) Standable(x, y int) bool {
 	if !Def(w.At(Ground, x, y)).Walkable {
 		return false
 	}

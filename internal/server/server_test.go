@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -562,4 +563,99 @@ func TestBuildingWithoutMaterialIsRefused(t *testing.T) {
 	c.join("Franco")
 	c.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: world.Crate})
 	c.next("ErrNoMaterial", isError(proto.ErrNoMaterial))
+}
+
+// memStore is a game.Store in memory, safe to share between hubs in a test.
+type memStore struct {
+	mu    sync.Mutex
+	saved *game.Saved
+	saves int
+}
+
+func (m *memStore) Load() (*game.Saved, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.saved, nil
+}
+
+func (m *memStore) Save(sv *game.Saved) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.saved, m.saves = sv, m.saves+1
+	return nil
+}
+
+const tokenA = "0123456789abcdef0123456789abcdef"
+
+func (c *testClient) joinAs(name, token string) *proto.Welcome {
+	c.send(&proto.Hello{Version: proto.Version, Name: name, JoinCode: testCode, Token: token})
+	return c.next("Welcome", func(m proto.Msg) bool { _, ok := m.(*proto.Welcome); return ok }).(*proto.Welcome)
+}
+
+func TestProgressSurvivesAServerRestart(t *testing.T) {
+	store := &memStore{}
+
+	// First run: build a fence, then shut the server down.
+	state1 := game.New(buildMap())
+	srv1, hub1, stop1 := startCfg(t, state1, Config{Store: store}, t.TempDir())
+	a := dial(t, srv1)
+	a.joinAs("Franco", tokenA)
+	a.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: world.Fence})
+	a.next("fence placed", func(m proto.Msg) bool { u, ok := m.(*proto.TileUpdate); return ok && u.Tile == world.Fence })
+	stop1()
+	<-hub1.done // Run saved on its way out
+	if store.saved == nil {
+		t.Fatal("shutdown must save the game")
+	}
+
+	// Second run: a fresh map restored from the store.
+	state2 := game.New(buildMap())
+	saved, _ := store.Load()
+	if err := state2.Restore(saved); err != nil {
+		t.Fatal(err)
+	}
+	srv2, _, _ := startCfg(t, state2, Config{Store: store}, t.TempDir())
+	b := dial(t, srv2)
+	b.joinAs("Franco", tokenA)
+	b.next("the fence is still in the world", func(m proto.Msg) bool {
+		ch, ok := m.(*proto.Chunk)
+		return ok && ch.X == 0 && ch.Y == 0 && ch.Layers[world.Object][5*world.ChunkSize+4] == world.Fence
+	})
+	b.next("one fence fewer in the bag", isInventory(func(h map[world.ItemID]uint16) bool {
+		return int(h[world.ItemFence]) == game.StarterKit[world.ItemFence]-1
+	}))
+}
+
+func TestTheGameIsSavedPeriodically(t *testing.T) {
+	store := &memStore{}
+	startCfg(t, game.New(buildMap()), Config{Store: store, SaveEvery: 50 * time.Millisecond}, t.TempDir())
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		store.mu.Lock()
+		n := store.saves
+		store.mu.Unlock()
+		if n >= 2 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("no periodic saves")
+}
+
+func TestSameTokenElsewhereReplacesTheOldConnection(t *testing.T) {
+	srv, _, _ := startCfg(t, game.New(buildMap()), Config{Store: &memStore{}}, t.TempDir())
+	old := dial(t, srv)
+	wOld := old.joinAs("Franco", tokenA)
+	watcher := dial(t, srv)
+	watcher.join("Raymon")
+	watcher.waitPlayer(wOld.ID)
+
+	fresh := dial(t, srv)
+	wNew := fresh.joinAs("Franco", tokenA)
+	old.closeErr(2 * time.Second) // the server closes the old tab
+	watcher.next("the old Franco leaves", func(m proto.Msg) bool {
+		pl, ok := m.(*proto.PlayerLeft)
+		return ok && pl.ID == wOld.ID
+	})
+	watcher.waitPlayer(wNew.ID)
 }

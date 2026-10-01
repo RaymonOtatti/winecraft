@@ -26,6 +26,7 @@ func main() {
 	walk := flag.String("walk", def.walk, `scripted route for snapshots, e.g. "W4,N2"`)
 	touch := flag.Bool("touch", false, "show the touch D-pad without a touch screen")
 	stay := flag.Duration("stay", 0, "keep playing this long after -snap before quitting")
+	token := flag.String("token", def.token, `player token (32 hex); "auto" keeps one in your config dir, "" plays anonymously`)
 	flag.Parse()
 
 	var g *client.Game
@@ -42,7 +43,10 @@ func main() {
 		if *name == "" || *code == "" {
 			log.Fatal("playing on a server needs -name and -code")
 		}
-		n := client.StartNet(context.Background(), client.NetConfig{URL: *server, Name: *name, JoinCode: *code})
+		if *token == "auto" {
+			*token = deviceToken()
+		}
+		n := client.StartNet(context.Background(), client.NetConfig{URL: *server, Name: *name, JoinCode: *code, Token: *token})
 		g = client.NewGame(client.NewSession(), n)
 		g.MyName = *name
 	}
@@ -63,4 +67,4 @@ func main() {
 	}
 }
 
-type startup struct{ server, name, code, walk string }
+type startup struct{ server, name, code, walk, token string }

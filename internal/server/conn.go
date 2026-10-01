@@ -46,14 +46,14 @@ func (h *Hub) serveWS(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	c := &client{ip: ip, conn: conn, send: make(chan []byte, h.cfg.SendBuffer)}
 
-	name, code, ok := h.handshake(ctx, c)
+	name, token, code, ok := h.handshake(ctx, c)
 	if !ok {
 		reject(ctx, conn, code)
 		return
 	}
 	reply := make(chan error, 1)
 	select {
-	case h.joins <- joinReq{c: c, name: name, reply: reply}:
+	case h.joins <- joinReq{c: c, name: name, token: token, reply: reply}:
 	case <-h.done:
 		conn.Close(websocket.StatusGoingAway, "server shutting down")
 		return
@@ -76,36 +76,36 @@ func (h *Hub) serveWS(w http.ResponseWriter, r *http.Request) {
 }
 
 // handshake reads the first message, which must be a valid Hello.
-func (h *Hub) handshake(ctx context.Context, c *client) (name string, errCode uint8, ok bool) {
+func (h *Hub) handshake(ctx context.Context, c *client) (name, token string, errCode uint8, ok bool) {
 	hctx, cancel := context.WithTimeout(ctx, h.cfg.HelloTimeout)
 	defer cancel()
 	typ, b, err := c.conn.Read(hctx)
 	if err != nil || typ != websocket.MessageBinary {
-		return "", 0, false
+		return "", "", 0, false
 	}
 	m, err := proto.Decode(b)
 	if err != nil {
-		return "", 0, false
+		return "", "", 0, false
 	}
 	hello, isHello := m.(*proto.Hello)
 	switch {
 	case !isHello:
-		return "", 0, false
+		return "", "", 0, false
 	case hello.Version != proto.Version:
-		return "", proto.ErrBadVersion, false
+		return "", "", proto.ErrBadVersion, false
 	case h.gate.locked(c.ip, time.Now(), h.cfg.FailInterval, h.cfg.FailBurst):
 		h.cfg.Log.Warn("join locked out after wrong codes", "ip", c.ip)
-		return "", proto.ErrRateLimited, false
+		return "", "", proto.ErrRateLimited, false
 	case subtle.ConstantTimeCompare([]byte(hello.JoinCode), []byte(h.cfg.JoinCode)) != 1:
 		h.gate.fail(c.ip, time.Now(), h.cfg.FailInterval, h.cfg.FailBurst)
 		h.cfg.Log.Warn("bad join code", "ip", c.ip)
-		return "", proto.ErrBadJoinCode, false
+		return "", "", proto.ErrBadJoinCode, false
 	}
 	name, err = game.CleanName(hello.Name)
 	if err != nil {
-		return "", proto.ErrBadName, false
+		return "", "", proto.ErrBadName, false
 	}
-	return name, 0, true
+	return name, hello.Token, 0, true
 }
 
 // reject tells the client why (when there is a code) and closes.

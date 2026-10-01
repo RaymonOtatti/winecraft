@@ -29,6 +29,7 @@ type NetConfig struct {
 	URL        string // ws:// or wss:// …/ws
 	Name       string
 	JoinCode   string
+	Token      string        // keeps your progress across visits; "" plays anonymously
 	Heartbeat  time.Duration // client Ping interval; default 15 s (the server drops 45 s of silence)
 	Backoff    time.Duration // first reconnect wait; default 1 s, doubling to MaxBackoff
 	MaxBackoff time.Duration // default 10 s
@@ -131,7 +132,7 @@ func (n *Net) session(ctx context.Context) (welcomed, rejected bool) {
 		}
 	}
 
-	hello, err := proto.Encode(&proto.Hello{Version: proto.Version, Name: n.cfg.Name, JoinCode: n.cfg.JoinCode})
+	hello, err := proto.Encode(&proto.Hello{Version: proto.Version, Name: n.cfg.Name, JoinCode: n.cfg.JoinCode, Token: n.cfg.Token})
 	if err != nil || write(ctx, conn, hello) != nil {
 		return false, false
 	}

@@ -23,6 +23,12 @@ func defaults() startup {
 	st := startup{server: scheme + "//" + loc.Get("host").String() + "/ws", name: get("name"), code: get("code"), walk: get("walk")}
 	if j := js.Global().Get("WINECRAFT_JOIN"); j.Truthy() {
 		st.name, st.code = j.Get("name").String(), j.Get("code").String()
+		if t := j.Get("token"); t.Truthy() {
+			st.token = t.String()
+		}
 	}
 	return st
 }
+
+// deviceToken: in the browser the page made the token (localStorage).
+func deviceToken() string { return "" }

@@ -32,6 +32,8 @@ type Player struct {
 	Seq    uint32 // last client move sequence applied
 	Inv    map[world.ItemID]int
 
+	token string // stable identity across reconnects and restarts; "" for anonymous
+
 	steps rate.Bucket // movement rate limit, see Move
 	edits rate.Bucket // edit rate limit, see Edit
 }
@@ -45,42 +47,80 @@ type State struct {
 	dirty    map[uint32]bool
 	invDirty map[uint32]bool
 	regrow   []regrowth
+	profiles map[string]Profile // saved progress by token, for players not online
 	nextID   uint32
 }
 
 // New starts an empty game on map m.
 func New(m *world.DevMap) *State {
+	m.World.MarkBaseline() // the map as generated; only later changes are saved
 	return &State{
 		Map:        m,
 		MaxPlayers: 8,
 		players:    make(map[uint32]*Player),
 		dirty:      make(map[uint32]bool),
 		invDirty:   make(map[uint32]bool),
+		profiles:   make(map[string]Profile),
 	}
 }
 
-// Join adds a player at the spawn point.
+// Join adds an anonymous player at the spawn point; nothing is saved for them.
 func (s *State) Join(name string) (*Player, error) {
-	name, err := CleanName(name)
+	p, _, err := s.JoinAs(name, "")
+	return p, err
+}
+
+// JoinAs adds a player identified by token (see ValidToken). A returning
+// token gets back its saved position and inventory; if that token is already
+// online, the old connection is replaced and its id returned so the server can
+// close it. An empty or malformed token plays anonymously.
+func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err error) {
+	name, err = CleanName(name)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	if !ValidToken(token) {
+		token = ""
+	}
+	if token != "" {
+		for _, other := range s.players {
+			if other.token == token {
+				replaced = other.ID
+				s.Leave(other.ID)
+				break
+			}
+		}
 	}
 	if len(s.players) >= s.MaxPlayers {
-		return nil, ErrFull
+		return nil, replaced, ErrFull
 	}
 	s.nextID++
-	p := &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int)}
-	for it, n := range StarterKit {
-		p.Inv[it] = n
+	p = &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int), token: token}
+	if prof, ok := s.profiles[token]; ok && token != "" {
+		p.Facing = prof.Facing
+		if pos := (world.Point{X: prof.X, Y: prof.Y}); s.Map.Bounds.Contains(pos.X, pos.Y) && s.Map.World.Standable(pos.X, pos.Y) {
+			p.Pos = pos
+		}
+		for it, n := range prof.Inv {
+			p.Inv[it] = n
+		}
+	} else {
+		for it, n := range StarterKit {
+			p.Inv[it] = n
+		}
 	}
 	s.players[p.ID] = p
 	s.dirty[p.ID] = true
 	s.invDirty[p.ID] = true
-	return p, nil
+	return p, replaced, nil
 }
 
-// Leave removes a player. Unknown ids are ignored.
+// Leave removes a player, keeping their progress if they have a token.
+// Unknown ids are ignored.
 func (s *State) Leave(id uint32) {
+	if p := s.players[id]; p != nil && p.token != "" {
+		s.profiles[p.token] = profileOf(p)
+	}
 	delete(s.players, id)
 	delete(s.dirty, id)
 	delete(s.invDirty, id)

@@ -15,7 +15,7 @@ func TestDevMapIsDeterministic(t *testing.T) {
 
 func TestDevMapSpawnIsStandable(t *testing.T) {
 	m := GenerateDevMap(1)
-	if !m.World.standable(m.Spawn.X, m.Spawn.Y) {
+	if !m.World.Standable(m.Spawn.X, m.Spawn.Y) {
 		t.Fatalf("spawn %v is not standable", m.Spawn)
 	}
 	if !m.Bounds.Contains(m.Spawn.X, m.Spawn.Y) {

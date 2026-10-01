@@ -50,8 +50,20 @@
     .then(r => { state.textContent = "Listo."; return r.instance; })
     .catch(e => { state.textContent = "No se pudo cargar el juego: " + e; throw e; });
 
+  // This browser's player token: 128 random bits, kept so progress survives
+  // visits. Without storage (private mode), progress lasts one visit.
+  function deviceToken() {
+    try {
+      let t = localStorage.getItem("winecraft.token");
+      if (/^[0-9a-f]{32}$/.test(t || "")) return t;
+      t = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem("winecraft.token", t);
+      return t;
+    } catch (e) { return ""; }
+  }
+
   async function start(name, code) {
-    globalThis.WINECRAFT_JOIN = { name, code };
+    globalThis.WINECRAFT_JOIN = { name, code, token: deviceToken() };
     document.getElementById("go").disabled = true;
     const instance = await ready;
     document.getElementById("join").remove();

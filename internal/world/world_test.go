@@ -118,3 +118,18 @@ func TestPutChunkCopiesTheLayers(t *testing.T) {
 		t.Fatalf("At = %d, want Sand", got)
 	}
 }
+
+func TestModifiedTracksChangesSinceTheBaseline(t *testing.T) {
+	w := New()
+	w.Set(1, 1, Grass)
+	w.Set(40, 1, Grass)
+	w.MarkBaseline()
+	if len(w.Modified()) != 0 {
+		t.Fatal("nothing changed since the baseline")
+	}
+	w.Set(41, 2, Fence)
+	w.Clear(Object, -1, -1) // clearing an empty spot in a missing chunk changes nothing
+	if got := w.Modified(); len(got) != 1 || got[0] != (ChunkCoord{X: 1, Y: 0}) {
+		t.Fatalf("Modified = %v, want just chunk (1,0)", got)
+	}
+}

@@ -23,14 +23,35 @@ type Chunk struct {
 	Layers [NumLayers][ChunkSize * ChunkSize]TileID
 }
 
-// World is a sparse map of chunks. Missing chunks read as None.
+// World is a sparse map of chunks. Missing chunks read as None. It remembers
+// which chunks changed since MarkBaseline, so only those need saving.
 type World struct {
-	chunks map[ChunkCoord]*Chunk
+	chunks   map[ChunkCoord]*Chunk
+	modified map[ChunkCoord]bool
 }
 
 // New returns an empty world.
 func New() *World {
-	return &World{chunks: make(map[ChunkCoord]*Chunk)}
+	return &World{chunks: make(map[ChunkCoord]*Chunk), modified: make(map[ChunkCoord]bool)}
+}
+
+// MarkBaseline forgets which chunks changed: the world as it is now can be
+// regenerated, so only later changes need saving.
+func (w *World) MarkBaseline() { clear(w.modified) }
+
+// Modified lists the chunks changed since MarkBaseline, ordered by Y then X.
+func (w *World) Modified() []ChunkCoord {
+	out := make([]ChunkCoord, 0, len(w.modified))
+	for cc := range w.modified {
+		out = append(out, cc)
+	}
+	slices.SortFunc(out, func(a, b ChunkCoord) int {
+		if a.Y != b.Y {
+			return cmp.Compare(a.Y, b.Y)
+		}
+		return cmp.Compare(a.X, b.X)
+	})
+	return out
 }
 
 // ChunkOf splits a world tile coordinate into its chunk and the local
@@ -71,6 +92,7 @@ func (w *World) put(l Layer, x, y int, t TileID) {
 		w.chunks[cc] = c
 	}
 	c.Layers[l][ly*ChunkSize+lx] = t
+	w.modified[cc] = true
 }
 
 // PutChunk replaces the chunk at cc with a copy of layers (a client loading
@@ -82,6 +104,7 @@ func (w *World) PutChunk(cc ChunkCoord, layers *[NumLayers][ChunkSize * ChunkSiz
 		w.chunks[cc] = c
 	}
 	c.Layers = *layers
+	w.modified[cc] = true
 }
 
 // Chunk returns the chunk at cc, or nil if nothing was ever written there.
