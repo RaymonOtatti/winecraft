@@ -1,9 +1,10 @@
 package client
 
 import (
+	"image"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"image"
 )
 
 // ChatPanel implements a simple side‑chat overlay used by the mentor.

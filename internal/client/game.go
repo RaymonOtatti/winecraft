@@ -174,8 +174,6 @@ func (g *Game) Update() error {
 	}
 	if g.done {
 		if g.err != nil {
-			// Add an initial mentor message
-			g.chat.AddMessage("Don César: ¡Bienvenido, aprendiz! Pulsa M para ver mis instrucciones.")
 			return g.err
 		}
 		return ebiten.Termination
@@ -186,11 +184,7 @@ func (g *Game) Update() error {
 			if !ok {
 				break
 			}
-			if chat, ok := m.(*proto.Chat); ok {
-				g.chat.AddMessage(chat.Text)
-			} else {
-				g.S.Apply(m)
-			}
+			g.S.Apply(m)
 		}
 	}
 	dt := time.Second / time.Duration(ebiten.TPS())
@@ -617,8 +611,6 @@ func drawNameTag(screen *ebiten.Image, name string, cx, bottom int) {
 func (g *Game) Layout(outsideW, outsideH int) (int, int) {
 	s := PixelScale(outsideW, outsideH)
 	g.w, g.h = outsideW/s, outsideH/s
-	// Add an initial mentor message
-	g.chat.AddMessage("Don César: ¡Bienvenido, aprendiz! Pulsa M para ver mis instrucciones.")
 	return g.w, g.h
 }
 
