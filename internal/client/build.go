@@ -34,12 +34,13 @@ func (h *Hotbar) Prev()                  { h.sel = (h.sel + len(h.Slots) - 1) % 
 func (h *Hotbar) Index() int             { return h.sel }
 func (h *Hotbar) Selected() world.TileID { return h.Slots[h.sel] }
 
-// Action is what the A and B buttons do.
+// Action is what a button does to the faced tile.
 type Action int
 
 const (
-	ActionPlace Action = iota // A
-	ActionBreak               // B
+	ActionUse   Action = iota // Space: harvest a vine (later: talk, open)
+	ActionBuild               // C: place the selected hotbar item
+	ActionBreak               // X: break what stands there, else the floor
 )
 
 // Target is the tile the player faces: where A and B act.
@@ -48,10 +49,21 @@ func (s *Session) Target() world.Point {
 	return world.Point{X: s.Me.Pos.X + dx, Y: s.Me.Pos.Y + dy}
 }
 
-// CanBuildAt reports whether the faced tile is one the server could accept:
-// standing still, inside the sandbox. The server still decides.
+// inZone reports whether p is somewhere players may build.
+func (s *Session) inZone(p world.Point) bool { return s.Sandbox.Contains(p.X, p.Y) }
+
+// openGround reports whether something can be built on p: bare soil with
+// nothing standing on it.
+func (s *Session) openGround(p world.Point) bool {
+	g := s.World.At(world.Ground, p.X, p.Y)
+	return s.World.At(world.Object, p.X, p.Y) == world.None && (g == world.Grass || g == world.Dirt || g == world.Sand)
+}
+
+// CanBuildAt reports whether the server could accept a build at p: standing
+// still, inside the build zone, on open ground. The cursor shows this; the
+// server still decides.
 func (s *Session) CanBuildAt(p world.Point) bool {
-	return s.Joined && !s.Me.Moving() && s.Sandbox.Contains(p.X, p.Y)
+	return s.Joined && !s.Me.Moving() && s.inZone(p) && s.openGround(p)
 }
 
 // EditFor turns a button press into the Edit to send, or false when there is
@@ -60,12 +72,12 @@ func (s *Session) CanBuildAt(p world.Point) bool {
 // first, then a floor.
 func (s *Session) EditFor(a Action, tile world.TileID) (*proto.Edit, bool) {
 	p := s.Target()
-	if !s.CanBuildAt(p) {
+	if !s.Joined || s.Me.Moving() || !s.inZone(p) {
 		return nil, false
 	}
 	e := &proto.Edit{X: int32(p.X), Y: int32(p.Y)}
 	switch a {
-	case ActionPlace:
+	case ActionBuild:
 		e.Layer, e.Tile = world.Def(tile).Layer, tile
 	case ActionBreak:
 		switch {
@@ -89,23 +101,41 @@ func (s *Session) CountFor(tile world.TileID) int {
 	return s.Inv[it]
 }
 
-// Primary is the A button: harvest the vine you face, otherwise place the
-// selected tile. Without the material it tells the player and sends nothing.
-func (s *Session) Primary(tile world.TileID) (proto.Msg, bool) {
-	p := s.Target()
+// Act turns a button press into the message to send. When the action can't
+// happen it says why in a notice and sends nothing (presses mid-step are
+// ignored quietly). The server still validates everything.
+func (s *Session) Act(a Action, tile world.TileID) (proto.Msg, bool) {
 	if !s.Joined || s.Me.Moving() {
 		return nil, false
 	}
-	if s.World.At(world.Object, p.X, p.Y) == world.Vine {
-		return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
+	p := s.Target()
+	switch a {
+	case ActionUse:
+		if s.World.At(world.Object, p.X, p.Y) == world.Vine {
+			return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
+		}
+		s.notify("No hay nada para usar acá")
+	case ActionBreak:
+		if !s.inZone(p) {
+			s.notify("Acá no se puede construir")
+		} else if e, ok := s.EditFor(ActionBreak, 0); ok {
+			return e, true
+		} else {
+			s.notify("No hay nada para romper")
+		}
+	case ActionBuild:
+		switch {
+		case !s.inZone(p):
+			s.notify("Acá no se puede construir")
+		case s.World.At(world.Object, p.X, p.Y) != world.None:
+			s.notify("Ese lugar está ocupado")
+		case !s.openGround(p):
+			s.notify("No se puede construir sobre eso")
+		case s.CountFor(tile) < 1:
+			s.notify(errorText[proto.ErrNoMaterial])
+		default:
+			return s.EditFor(ActionBuild, tile)
+		}
 	}
-	e, ok := s.EditFor(ActionPlace, tile)
-	if !ok {
-		return nil, false
-	}
-	if s.CountFor(tile) < 1 {
-		s.notify(errorText[proto.ErrNoMaterial])
-		return nil, false
-	}
-	return e, true
+	return nil, false
 }

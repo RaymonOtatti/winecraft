@@ -19,7 +19,7 @@ func TestInventoryMessageReplacesTheInventory(t *testing.T) {
 func TestAHarvestsAVineYouFace(t *testing.T) {
 	s := builder(t)
 	s.World.Set(6, 5, world.Vine) // east of (5,5), which we face
-	m, ok := s.Primary(world.Fence)
+	m, ok := s.Act(ActionUse, world.Fence)
 	if it, isInteract := m.(*proto.Interact); !ok || !isInteract || it.X != 6 || it.Y != 5 {
 		t.Fatalf("A facing a vine must harvest: %#v ok=%v", m, ok)
 	}
@@ -28,7 +28,7 @@ func TestAHarvestsAVineYouFace(t *testing.T) {
 func TestAPlacesWhenYouHaveTheMaterial(t *testing.T) {
 	s := builder(t)
 	s.Apply(&proto.Inventory{Items: []proto.Item{{ID: world.ItemFence, Count: 1}}})
-	m, ok := s.Primary(world.Fence)
+	m, ok := s.Act(ActionBuild, world.Fence)
 	if e, isEdit := m.(*proto.Edit); !ok || !isEdit || e.Tile != world.Fence {
 		t.Fatalf("A with a fence in the bag must place it: %#v ok=%v", m, ok)
 	}
@@ -38,7 +38,7 @@ func TestAWithoutMaterialSaysSoAndSendsNothing(t *testing.T) {
 	s := builder(t)
 	s.Apply(&proto.Inventory{})
 	seq := s.NoticeSeq
-	if m, ok := s.Primary(world.Fence); ok {
+	if m, ok := s.Act(ActionBuild, world.Fence); ok {
 		t.Fatalf("sent %#v without a fence in the bag", m)
 	}
 	if s.NoticeSeq == seq || s.Notice != "Te faltan materiales" {

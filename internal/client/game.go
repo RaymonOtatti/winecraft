@@ -96,9 +96,9 @@ func NewGame(s *Session, n *Net) *Game {
 	return g
 }
 
-// Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,A,Z60":
-// N/S/W/E<n> walk n steps, A places, B breaks, H<n> picks hotbar slot n,
-// Z<n> waits n ticks. The snapshot is taken after it ends.
+// Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,C,Z60":
+// N/S/W/E<n> walk n steps, A uses, C builds, X breaks, H<n> picks hotbar
+// slot n, Z<n> waits n ticks. The snapshot is taken after it ends.
 func (g *Game) Script(route string) error {
 	tps := ebiten.DefaultTPS
 	for _, part := range strings.Split(route, ",") {
@@ -106,11 +106,14 @@ func (g *Game) Script(route string) error {
 		switch {
 		case part == "":
 			continue
-		case part == "A":
-			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{A: true, Slot: -1}})
+		case part == "A": // use (harvest)
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Use: true, Slot: -1}})
 			continue
-		case part == "B":
-			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{B: true, Slot: -1}})
+		case part == "C": // build
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Build: true, Slot: -1}})
+			continue
+		case part == "X", part == "B": // break
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Break: true, Slot: -1}})
 			continue
 		}
 		var c rune
@@ -214,14 +217,14 @@ func (g *Game) Update() error {
 	if b.Prev {
 		g.Hotbar.Prev()
 	}
-	if b.A {
-		if m, ok := g.S.Primary(g.Hotbar.Selected()); ok {
-			g.send(m)
-		}
-	}
-	if b.B {
-		if e, ok := g.S.EditFor(ActionBreak, 0); ok {
-			g.send(e)
+	for _, act := range []struct {
+		pressed bool
+		a       Action
+	}{{b.Use, ActionUse}, {b.Build, ActionBuild}, {b.Break, ActionBreak}} {
+		if act.pressed {
+			if m, ok := g.S.Act(act.a, g.Hotbar.Selected()); ok {
+				g.send(m)
+			}
 		}
 	}
 	return nil
@@ -302,9 +305,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		drawNameTag(screen, DisplayName(r.Name), int(math.Round(sx))+art.Tile/2, int(math.Round(sy))-2)
 	}
 
-	if t := g.S.Target(); g.S.CanBuildAt(t) {
+	if t := g.S.Target(); g.S.Joined && !me.Moving() {
+		col := cursorNo
+		if g.S.CanBuildAt(t) {
+			col = cursorColor
+		}
 		cx, cy := cam.ToScreen(float64(t.X*art.Tile), float64(t.Y*art.Tile))
-		vector.StrokeRect(screen, float32(math.Round(cx))+0.5, float32(math.Round(cy))+0.5, art.Tile-1, art.Tile-1, 1, cursorColor, false)
+		vector.StrokeRect(screen, float32(math.Round(cx))+0.5, float32(math.Round(cy))+0.5, art.Tile-1, art.Tile-1, 1, col, false)
 	}
 
 	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
@@ -314,8 +321,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.drawHUD(screen, pads)
 	if g.ShowDpad || g.Input.TouchSeen() {
 		drawDpad(screen, pads.Dpad)
-		drawButton(screen, pads.A, "A")
-		drawButton(screen, pads.B, "B")
+		drawButton(screen, pads.Use, "A")
+		drawButton(screen, pads.Build, "C")
+		drawButton(screen, pads.Break, "X")
 	}
 
 	if g.SnapPath != "" && !g.snapped && (g.frame >= g.SnapFrame || g.unjoined >= 120) {
@@ -334,6 +342,7 @@ func (g *Game) drawSprite(screen *ebiten.Image, cam Camera, x, y float64, facing
 var (
 	tagBack     = color.NRGBA{0x1b, 0x14, 0x10, 0xb0}
 	cursorColor = color.NRGBA{0xff, 0xf4, 0xd6, 0xe0}
+	cursorNo    = color.NRGBA{0xd9, 0x3b, 0x3b, 0xd0}
 	slotBack    = color.NRGBA{0x1b, 0x14, 0x10, 0xa0}
 	slotPick    = color.NRGBA{0xe8, 0xc5, 0x6a, 0xff}
 )

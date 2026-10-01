@@ -48,11 +48,11 @@ func builder(t *testing.T) *Session {
 
 func TestPlaceTargetsTheFacedTile(t *testing.T) {
 	s := builder(t)
-	e, ok := s.EditFor(ActionPlace, world.Fence)
+	e, ok := s.EditFor(ActionBuild, world.Fence)
 	if !ok || *e != (proto.Edit{X: 6, Y: 5, Layer: world.Object, Tile: world.Fence}) {
 		t.Fatalf("place fence: %+v ok=%v", e, ok)
 	}
-	e, ok = s.EditFor(ActionPlace, world.Planks)
+	e, ok = s.EditFor(ActionBuild, world.Planks)
 	if !ok || e.Layer != world.Ground {
 		t.Fatalf("planks go on the ground layer: %+v", e)
 	}
@@ -78,13 +78,13 @@ func TestNoEditsOutsideTheSandboxOrMidStep(t *testing.T) {
 	s := builder(t)
 	s.Me.Reset(world.Point{X: 7, Y: 5}) // facing east → target (8,5), outside
 	s.Me.Facing = world.East
-	if _, ok := s.EditFor(ActionPlace, world.Fence); ok {
+	if _, ok := s.EditFor(ActionBuild, world.Fence); ok {
 		t.Fatal("must not send edits for tiles outside the sandbox")
 	}
 	s.Me.Reset(world.Point{X: 5, Y: 5})
 	s.Me.Facing = world.West
 	hold(s.Me, world.West, StepDuration/2) // mid-step
-	if _, ok := s.EditFor(ActionPlace, world.Fence); ok {
+	if _, ok := s.EditFor(ActionBuild, world.Fence); ok {
 		t.Fatal("must not build while walking")
 	}
 }

@@ -57,9 +57,9 @@ var keys = []struct {
 // Pads lays out every touch control for a w×h logical screen: the D-pad
 // bottom-left, A and B bottom-right, the hotbar bottom-centre.
 type Pads struct {
-	Dpad   Dpad
-	A, B   image.Rectangle
-	Hotbar []image.Rectangle
+	Dpad              Dpad
+	Use, Build, Break image.Rectangle
+	Hotbar            []image.Rectangle
 }
 
 const (
@@ -70,8 +70,10 @@ const (
 // NewPads lays out the controls for n hotbar slots.
 func NewPads(w, h, n int) Pads {
 	p := Pads{Dpad: NewDpad(w, h)}
-	p.A = image.Rect(w-12-padButton, h-12-padButton*3/2-padButton/2, w-12, h-12-padButton*3/2+padButton/2)
-	p.B = p.A.Sub(image.Pt(padButton+6, -padButton*3/4))
+	// A (use) bottom-right, X (break) to its left and lower, C (build) above A.
+	p.Use = image.Rect(w-12-padButton, h-12-padButton*3/2-padButton/2, w-12, h-12-padButton*3/2+padButton/2)
+	p.Break = p.Use.Sub(image.Pt(padButton+6, -padButton*3/4))
+	p.Build = p.Use.Sub(image.Pt(0, padButton+8))
 	x0 := (w - n*slotSize) / 2
 	for i := 0; i < n; i++ {
 		x := x0 + i*slotSize
@@ -82,9 +84,9 @@ func NewPads(w, h, n int) Pads {
 
 // Buttons is what was pressed this frame (besides walking).
 type Buttons struct {
-	A, B       bool
-	Slot       int // hotbar slot picked directly, or -1
-	Next, Prev bool
+	Use, Build, Break bool
+	Slot              int // hotbar slot picked directly, or -1
+	Next, Prev        bool
 }
 
 // Input tracks which direction is held. With several keys down, the most
@@ -103,9 +105,10 @@ type Input struct {
 }
 
 var (
-	keysA    = []ebiten.Key{ebiten.KeySpace, ebiten.KeyZ, ebiten.KeyEnter}
-	keysB    = []ebiten.Key{ebiten.KeyX, ebiten.KeyBackspace, ebiten.KeyDelete}
-	keysSlot = []ebiten.Key{ebiten.KeyDigit1, ebiten.KeyDigit2, ebiten.KeyDigit3, ebiten.KeyDigit4, ebiten.KeyDigit5,
+	keysUse   = []ebiten.Key{ebiten.KeySpace, ebiten.KeyZ, ebiten.KeyEnter}
+	keysBuild = []ebiten.Key{ebiten.KeyC}
+	keysBreak = []ebiten.Key{ebiten.KeyX, ebiten.KeyBackspace, ebiten.KeyDelete}
+	keysSlot  = []ebiten.Key{ebiten.KeyDigit1, ebiten.KeyDigit2, ebiten.KeyDigit3, ebiten.KeyDigit4, ebiten.KeyDigit5,
 		ebiten.KeyDigit6, ebiten.KeyDigit7, ebiten.KeyDigit8, ebiten.KeyDigit9}
 )
 
@@ -117,8 +120,9 @@ func (in *Input) PollButtons(p Pads) Buttons {
 		return b
 	}
 	b := Buttons{Slot: -1}
-	b.A = anyJustPressed(keysA)
-	b.B = anyJustPressed(keysB)
+	b.Use = anyJustPressed(keysUse)
+	b.Build = anyJustPressed(keysBuild)
+	b.Break = anyJustPressed(keysBreak)
 	for i, k := range keysSlot {
 		if inpututil.IsKeyJustPressed(k) {
 			b.Slot = i
@@ -135,10 +139,12 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	for _, id := range in.justIDs {
 		pt := image.Pt(ebiten.TouchPosition(id))
 		switch {
-		case pt.In(p.A.Inset(-4)):
-			b.A = true
-		case pt.In(p.B.Inset(-4)):
-			b.B = true
+		case pt.In(p.Use.Inset(-4)):
+			b.Use = true
+		case pt.In(p.Build.Inset(-4)):
+			b.Build = true
+		case pt.In(p.Break.Inset(-4)):
+			b.Break = true
 		default:
 			for i, r := range p.Hotbar {
 				if pt.In(r) {
