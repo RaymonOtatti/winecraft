@@ -38,6 +38,7 @@ func HelpLines() []string {
 		"1-4   bloque",
 		"I     inventario",
 		"K     craftear",
+		"M     mentor",
 		"H     ayuda",
 	}
 }

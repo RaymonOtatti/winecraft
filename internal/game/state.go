@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/RaymonOtatti/winecraft/internal/proto"
 	"github.com/RaymonOtatti/winecraft/internal/rate"
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
@@ -26,13 +27,14 @@ var (
 
 // Player is one connected player.
 type Player struct {
-	ID     uint32
-	Name   string
-	Pos    world.Point
-	Facing world.Dir
-	Seq    uint32 // last client move sequence applied
-	Inv    map[world.ItemID]int
-	Hotbar [HotbarSlots]world.ItemID
+	ID        uint32
+	Name      string
+	Pos       world.Point
+	Facing    world.Dir
+	Seq       uint32 // last client move sequence applied
+	Inv       map[world.ItemID]int
+	Hotbar    [HotbarSlots]world.ItemID
+	QuestStep int // simple quest progression
 
 	token string // stable identity across reconnects and restarts; "" for anonymous
 
@@ -115,6 +117,7 @@ func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err erro
 		if prof.Hotbar != ([HotbarSlots]world.ItemID{}) { // older saves have none
 			p.Hotbar = prof.Hotbar
 		}
+		p.QuestStep = prof.QuestStep
 	} else {
 		for it, n := range StarterKit {
 			p.Inv[it] = n
@@ -180,4 +183,31 @@ func CleanName(name string) (string, error) {
 		return "", ErrBadName
 	}
 	return name, nil
+}
+
+// CheckQuest checks the player's quest progress and returns a Chat message if a new step is reached.
+func (s *State) CheckQuest(id uint32) *proto.Chat {
+	p := s.players[id]
+	if p == nil {
+		return nil
+	}
+	if p.QuestStep == 0 && p.Inv[world.ItemGrapes] > 0 {
+		p.QuestStep = 1
+		return &proto.Chat{Text: "¡Has cosechado uvas! Ahora construye un banco."}
+	}
+	return nil
+}
+
+// CheckQuestEdit checks quest progress after a successful edit (e.g., building a sand bank).
+func (s *State) CheckQuestEdit(id uint32, ch Change) *proto.Chat {
+	p := s.players[id]
+	if p == nil {
+		return nil
+	}
+	// After step 1 (grapes harvested), the next step is to build a sand bank.
+	if p.QuestStep == 1 && ch.Tile == world.SandBank && ch.Layer == world.Object {
+		p.QuestStep = 2
+		return &proto.Chat{Text: "¡Has construido un banco de arena! Continúa la aventura."}
+	}
+	return nil
 }

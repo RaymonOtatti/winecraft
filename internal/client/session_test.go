@@ -91,6 +91,18 @@ func TestTileUpdateAndError(t *testing.T) {
 	}
 }
 
+func TestChatBumpsChatSeq(t *testing.T) {
+	s := welcomed(t)
+	s.Apply(&proto.Chat{Text: "Primera instrucción"})
+	if s.ChatSeq != 1 || s.Chat != "Primera instrucción" {
+		t.Fatalf("Chat not recorded: seq %d text %q", s.ChatSeq, s.Chat)
+	}
+	s.Apply(&proto.Chat{Text: "Segunda instrucción"})
+	if s.ChatSeq != 2 || s.Chat != "Segunda instrucción" {
+		t.Fatalf("Chat seq must bump: got %d %q", s.ChatSeq, s.Chat)
+	}
+}
+
 func TestReconnectWelcomeResetsEverything(t *testing.T) {
 	s := welcomed(t)
 	s.Apply(&proto.PlayerState{ID: 9, X: 2, Y: 2, Name: "Raymon"})

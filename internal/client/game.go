@@ -41,6 +41,7 @@ type Game struct {
 
 	toast      Toast
 	noticeSeen int
+	chatSeq    int
 	zone       string          // the zone we last announced (world.ZoneAt)
 	unjoined   int             // frames spent before joining (a rejected client still snapshots)
 	frameCost  []time.Duration // Update+Draw per frame, when benchmarking
@@ -51,6 +52,7 @@ type Game struct {
 	icons   [64]*ebiten.Image // item icons, one atlas
 	panel   InvPanel
 	craft   CraftPanel
+	chat    ChatPanel
 	player  [4][2]*ebiten.Image
 	w, h    int
 	frame   int
@@ -86,7 +88,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH}
+	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH, chat: ChatPanel{}, craft: CraftPanel{}}
 	icons := ebiten.NewImageFromImage(art.Items())
 	for id := 1; id < world.NumItems(); id++ {
 		g.icons[id] = icons.SubImage(art.ItemRect(world.ItemID(id))).(*ebiten.Image)
@@ -101,13 +103,16 @@ func NewGame(s *Session, n *Net) *Game {
 			g.player[d][f] = sheet.SubImage(art.PlayerRect(d, f)).(*ebiten.Image)
 		}
 	}
+	// Add an initial mentor message
+	g.chat.AddMessage("Don César: ¡Bienvenido, aprendiz! Pulsa M para ver mis instrucciones.")
 	return g
 }
 
 // Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,C,Z60":
 // N/S/W/E<n> walk n steps, A uses, C builds, X breaks, I toggles the
-// inventory, K toggles the crafting panel, H<n> picks hotbar slot n (or, with
-// the inventory open, puts the highlighted item there), Z<n> waits n ticks.
+// inventory, K toggles the crafting panel, M toggles the mentor chat panel,
+// H<n> picks hotbar slot n (or, with the inventory open, puts the highlighted
+// item there), Z<n> waits n ticks.
 // The snapshot is taken after.
 func (g *Game) Script(route string) error {
 	tps := ebiten.DefaultTPS
@@ -127,6 +132,9 @@ func (g *Game) Script(route string) error {
 			continue
 		case part == "K": // crafting panel
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Craft: true, Slot: -1}})
+			continue
+		case part == "M": // mentor chat panel
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Chat: true, Slot: -1}})
 			continue
 		case part == "X", part == "B": // break
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Break: true, Slot: -1}})
@@ -166,6 +174,8 @@ func (g *Game) Update() error {
 	}
 	if g.done {
 		if g.err != nil {
+			// Add an initial mentor message
+			g.chat.AddMessage("Don César: ¡Bienvenido, aprendiz! Pulsa M para ver mis instrucciones.")
 			return g.err
 		}
 		return ebiten.Termination
@@ -176,7 +186,11 @@ func (g *Game) Update() error {
 			if !ok {
 				break
 			}
-			g.S.Apply(m)
+			if chat, ok := m.(*proto.Chat); ok {
+				g.chat.AddMessage(chat.Text)
+			} else {
+				g.S.Apply(m)
+			}
 		}
 	}
 	dt := time.Second / time.Duration(ebiten.TPS())
@@ -184,6 +198,15 @@ func (g *Game) Update() error {
 	if g.S.NoticeSeq != g.noticeSeen {
 		g.noticeSeen = g.S.NoticeSeq
 		g.toast.Show(g.S.Notice, time.Now())
+	}
+	if g.S.ChatSeq != g.chatSeq {
+		g.chatSeq = g.S.ChatSeq
+		g.chat.AddMessage(g.S.Chat)
+		// Open the chat panel automatically on the first mentor message.
+		if !g.chat.seen {
+			g.chat.Open = true
+			g.chat.seen = true
+		}
 	}
 	if !g.S.Joined {
 		g.unjoined++
@@ -221,16 +244,22 @@ func (g *Game) Update() error {
 	}
 	pads := NewPads(g.w, g.h, proto.HotbarSlots)
 	b := g.Input.PollButtons(pads)
+	// UI panels are mutually exclusive so movement arrows and HUD labels never
+	// collide with two open panels at once.
+	if b.Chat {
+		g.chat.Toggle()
+		g.panel.Open, g.craft.Open = false, false
+	}
 	if b.Inv {
 		g.panel.Toggle()
-		g.craft.Open = false
+		g.craft.Open, g.chat.Open = false, false
 	}
 	if b.Craft {
 		g.craft.Toggle()
-		g.panel.Open = false
+		g.panel.Open, g.chat.Open = false, false
 	}
 	dir, held := g.Input.Poll(pads.Dpad)
-	if g.panel.Open || g.craft.Open {
+	if g.panel.Open || g.craft.Open || g.chat.Open {
 		held = false // the open panel takes the arrows
 	}
 	m, sent := g.S.Me.Update(dt, dir, held)
@@ -249,10 +278,25 @@ func (g *Game) Update() error {
 	if b.Help {
 		SetHelpVisible(g.Prefs, !HelpVisible(g.Prefs))
 	}
+	if g.chat.Open {
+		if b.Up {
+			g.chat.Scroll(-1)
+		}
+		if b.Down {
+			g.chat.Scroll(+1)
+		}
+		if b.Esc {
+			g.chat.Toggle()
+			return nil
+		}
+		// When chat panel is open, suppress other input handling.
+		return nil
+	}
 	if g.panel.Open {
 		g.updatePanel(b)
 		return nil
 	}
+
 	if g.craft.Open {
 		g.updateCraftPanel(b)
 		return nil
@@ -387,7 +431,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	pads := NewPads(g.w, g.h, proto.HotbarSlots)
-	panelOpen := g.panel.Open || g.craft.Open
+	panelOpen := g.panel.Open || g.craft.Open || g.chat.Open
 	if g.S.Joined {
 		if !panelOpen {
 			g.drawHotbar(screen, pads)
@@ -397,6 +441,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		if g.craft.Open {
 			g.drawCraftPanel(screen)
+		}
+		if g.chat.Open {
+			g.drawChatPanel(screen)
 		}
 	}
 	g.drawHUD(screen, pads)
@@ -452,7 +499,7 @@ var dim = color.NRGBA{0x1b, 0x14, 0x10, 0xc8}
 // drawHUD draws the connection status, who is online, the selected tile's
 // name and any notice. Before joining it dims the screen and says why.
 func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
-	panelOpen := g.panel.Open || g.craft.Open
+	panelOpen := g.panel.Open || g.craft.Open || g.chat.Open
 	state := Online
 	if g.Net != nil {
 		state = g.Net.State()
@@ -570,6 +617,8 @@ func drawNameTag(screen *ebiten.Image, name string, cx, bottom int) {
 func (g *Game) Layout(outsideW, outsideH int) (int, int) {
 	s := PixelScale(outsideW, outsideH)
 	g.w, g.h = outsideW/s, outsideH/s
+	// Add an initial mentor message
+	g.chat.AddMessage("Don César: ¡Bienvenido, aprendiz! Pulsa M para ver mis instrucciones.")
 	return g.w, g.h
 }
 

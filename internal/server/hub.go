@@ -233,9 +233,25 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 	case *proto.Edit:
 		ch, err := h.state.Edit(c.id, int(m.X), int(m.Y), m.Layer, m.Tile, time.Now())
 		h.reply(c, ch, err)
+		if err == nil {
+			if chat := h.state.CheckQuestEdit(c.id, ch); chat != nil {
+				h.sendTo(c, chat)
+			}
+			if chat := h.state.CheckQuest(c.id); chat != nil {
+				h.sendTo(c, chat)
+			}
+		}
 	case *proto.Interact:
 		ch, err := h.state.Harvest(c.id, int(m.X), int(m.Y), time.Now())
 		h.reply(c, ch, err)
+		if err == nil {
+			if chat := h.state.CheckQuestEdit(c.id, ch); chat != nil {
+				h.sendTo(c, chat)
+			}
+			if chat := h.state.CheckQuest(c.id); chat != nil {
+				h.sendTo(c, chat)
+			}
+		}
 	case *proto.Hotbar:
 		if h.state.SetHotbar(c.id, m.Slots) != nil {
 			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})

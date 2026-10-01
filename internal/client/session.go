@@ -24,6 +24,8 @@ type Session struct {
 	Hotbar    *Hotbar
 	Notice    string // the last server error, for the HUD
 	NoticeSeq int    // bumps on every error, so the same message can toast twice
+	Chat      string // the latest mentor chat line, for the chat panel
+	ChatSeq   int    // bumps on every new chat line
 }
 
 // NewSession starts empty, waiting for a Welcome.
@@ -87,6 +89,9 @@ func (s *Session) Apply(m proto.Msg) {
 		if s.Notice == "" {
 			s.Notice = "Error del servidor"
 		}
+	case *proto.Chat:
+		s.ChatSeq++
+		s.Chat = m.Text
 	}
 }
 

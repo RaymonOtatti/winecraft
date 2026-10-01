@@ -84,12 +84,13 @@ func NewPads(w, h, n int) Pads {
 
 // Buttons is what was pressed this frame (besides walking).
 type Buttons struct {
-	Use, Build, Break  bool
-	Help               bool          // toggle the command side bar
-	Inv, Craft, Esc, Up, Down bool    // inventory and crafting panels
-	Taps               []image.Point // taps and clicks this frame, for the panel
-	Slot               int           // hotbar slot picked directly, or -1
-	Next, Prev         bool
+	Chat                      bool // open/close mentor chat panel
+	Use, Build, Break         bool
+	Help                      bool          // toggle the command side bar
+	Inv, Craft, Esc, Up, Down bool          // inventory and crafting panels
+	Taps                      []image.Point // taps and clicks this frame, for the panel
+	Slot                      int           // hotbar slot picked directly, or -1
+	Next, Prev                bool
 }
 
 // Input tracks which direction is held. With several keys down, the most
@@ -129,6 +130,7 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	b.Help = inpututil.IsKeyJustPressed(ebiten.KeyH)
 	b.Inv = inpututil.IsKeyJustPressed(ebiten.KeyI) || inpututil.IsKeyJustPressed(ebiten.KeyTab)
 	b.Craft = inpututil.IsKeyJustPressed(ebiten.KeyK)
+	b.Chat = inpututil.IsKeyJustPressed(ebiten.KeyM)
 	b.Esc = inpututil.IsKeyJustPressed(ebiten.KeyEscape)
 	b.Up = inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW)
 	b.Down = inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS)

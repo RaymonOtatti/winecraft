@@ -55,6 +55,7 @@ const (
 	TypeInteract                    // client → server: use what is at (X, Y), e.g. harvest a vine
 	TypeHotbar                      // both ways: the item in each hotbar slot
 	TypeCraft                       // client → server: craft a recipe by id
+	TypeChat                        // server → client: mentor chat message
 	numTypes
 )
 
@@ -63,6 +64,7 @@ var names = map[Type]string{
 	TypePlayerState: "PlayerState", TypePlayerLeft: "PlayerLeft", TypeEdit: "Edit",
 	TypeTileUpdate: "TileUpdate", TypeInventory: "Inventory", TypePing: "Ping", TypeError: "Error",
 	TypeInteract: "Interact", TypeHotbar: "Hotbar", TypeCraft: "Craft",
+	TypeChat: "Chat",
 }
 
 func (t Type) String() string {
@@ -153,6 +155,9 @@ type Hotbar struct{ Slots [HotbarSlots]world.ItemID }
 // Craft asks the server to craft one recipe by id.
 type Craft struct{ Recipe uint8 }
 
+// Chat carries a mentor message to the client.
+type Chat struct{ Text string }
+
 type Error struct {
 	Code uint8
 	Text string
@@ -172,6 +177,8 @@ func (*Error) Type() Type       { return TypeError }
 func (*Interact) Type() Type    { return TypeInteract }
 func (*Hotbar) Type() Type      { return TypeHotbar }
 func (*Craft) Type() Type       { return TypeCraft }
+
+func (*Chat) Type() Type { return TypeChat }
 
 // Encode serializes m. It fails if a field exceeds its limit.
 func Encode(m Msg) ([]byte, error) {
@@ -225,6 +232,8 @@ func Decode(b []byte) (Msg, error) {
 		m = new(Hotbar)
 	case TypeCraft:
 		m = new(Craft)
+	case TypeChat:
+		m = new(Chat)
 	default:
 		return nil, fmt.Errorf("unknown message type %d", b[0])
 	}
@@ -395,6 +404,9 @@ func (m *Hotbar) decode(r *reader) {
 
 func (m *Craft) encode(w *writer) { w.u8(m.Recipe) }
 func (m *Craft) decode(r *reader) { m.Recipe = r.u8() }
+
+func (m *Chat) encode(w *writer) { w.strMax(m.Text, MaxText) }
+func (m *Chat) decode(r *reader) { m.Text = r.str(MaxText) }
 
 func (m *Ping) encode(w *writer) { w.u32(m.Nonce) }
 func (m *Ping) decode(r *reader) { m.Nonce = r.u32() }

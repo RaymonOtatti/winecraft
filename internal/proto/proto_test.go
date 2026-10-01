@@ -36,6 +36,7 @@ func samples() []Msg {
 		&Inventory{},
 		&Ping{Nonce: 99},
 		&Error{Code: ErrBadJoinCode, Text: "código incorrecto"},
+		&Chat{Text: "¡Has cosechado uvas! Ahora construye un banco."},
 	}
 }
 

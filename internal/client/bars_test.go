@@ -10,7 +10,7 @@ import (
 
 func TestHelpListsTheMainCommands(t *testing.T) {
 	text := strings.Join(HelpLines(), "\n")
-	for _, want := range []string{"WASD", "Esp", "C ", "X ", "1-4", "I ", "K ", "H "} {
+	for _, want := range []string{"WASD", "Esp", "C ", "X ", "1-4", "I ", "K ", "M ", "H "} {
 		if !strings.Contains(text, want) {
 			t.Errorf("help is missing %q:\n%s", want, text)
 		}
