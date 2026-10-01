@@ -20,7 +20,7 @@ func defaults() startup {
 		}
 		return ""
 	}
-	st := startup{server: scheme + "//" + loc.Get("host").String() + "/ws", name: get("name"), code: get("code")}
+	st := startup{server: scheme + "//" + loc.Get("host").String() + "/ws", name: get("name"), code: get("code"), walk: get("walk")}
 	if j := js.Global().Get("WINECRAFT_JOIN"); j.Truthy() {
 		st.name, st.code = j.Get("name").String(), j.Get("code").String()
 	}

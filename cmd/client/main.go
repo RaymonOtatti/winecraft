@@ -23,7 +23,7 @@ func main() {
 	snap := flag.String("snap", "", "save a frame as a PNG at this path and quit")
 	seed := flag.Uint64("seed", 1, "dev map seed (offline mode)")
 	at := flag.String("at", "", "start at tile x,y instead of spawn (offline snapshots)")
-	walk := flag.String("walk", "", `scripted route for snapshots, e.g. "W4,N2"`)
+	walk := flag.String("walk", def.walk, `scripted route for snapshots, e.g. "W4,N2"`)
 	touch := flag.Bool("touch", false, "show the touch D-pad without a touch screen")
 	stay := flag.Duration("stay", 0, "keep playing this long after -snap before quitting")
 	flag.Parse()
@@ -63,4 +63,4 @@ func main() {
 	}
 }
 
-type startup struct{ server, name, code string }
+type startup struct{ server, name, code, walk string }

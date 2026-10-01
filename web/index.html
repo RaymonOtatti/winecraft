@@ -50,16 +50,21 @@
     .then(r => { state.textContent = "Listo."; return r.instance; })
     .catch(e => { state.textContent = "No se pudo cargar el juego: " + e; throw e; });
 
-  form.addEventListener("submit", async ev => {
-    ev.preventDefault();
-    const name = nameEl.value.trim(), code = codeEl.value.trim();
-    try { localStorage.setItem("winecraft.name", name); } catch (e) {}
+  async function start(name, code) {
     globalThis.WINECRAFT_JOIN = { name, code };
     document.getElementById("go").disabled = true;
     const instance = await ready;
     document.getElementById("join").remove();
     go.run(instance);
+  }
+  form.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const name = nameEl.value.trim(), code = codeEl.value.trim();
+    try { localStorage.setItem("winecraft.name", name); } catch (e) {}
+    start(name, code);
   });
+  // A link with both ?name= and ?code= joins straight away (automated tests).
+  if (params.get("name") && params.get("code")) start(params.get("name"), params.get("code"));
 </script>
 </body>
 </html>
