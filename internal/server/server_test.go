@@ -25,7 +25,12 @@ const testCode = "malbec-42"
 // startServer runs a hub and its HTTP handler on an httptest server.
 func startServer(t *testing.T, webDir string) (*httptest.Server, *Hub) {
 	t.Helper()
-	hub := NewHub(game.New(world.GenerateDevMap(1)), Config{JoinCode: testCode, Tick: 20 * time.Millisecond})
+	return startServerWith(t, game.New(world.GenerateDevMap(1)), webDir)
+}
+
+func startServerWith(t *testing.T, state *game.State, webDir string) (*httptest.Server, *Hub) {
+	t.Helper()
+	hub := NewHub(state, Config{JoinCode: testCode, Tick: 20 * time.Millisecond})
 	ctx, cancel := context.WithCancel(context.Background())
 	go hub.Run(ctx)
 	srv := httptest.NewServer(Handler(hub, webDir))
@@ -289,4 +294,56 @@ func TestSpeedHackOverTheNetworkIsCapped(t *testing.T) {
 	if moved := final.X - wa.X; moved > game.StepBurst+1 {
 		t.Fatalf("10 instant moves advanced %d tiles; the burst allows %d", moved, game.StepBurst)
 	}
+}
+
+// buildMap: grass everywhere, spawn (5,5) inside a sandbox covering x<6.
+func buildMap() *world.DevMap {
+	w := world.New()
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			w.Set(x, y, world.Grass)
+		}
+	}
+	return &world.DevMap{World: w, Bounds: world.Rect{W: 10, H: 10}, Spawn: world.Point{X: 5, Y: 5},
+		Sandbox: world.Rect{W: 6, H: 10}}
+}
+
+func isError(code uint8) func(proto.Msg) bool {
+	return func(m proto.Msg) bool { e, ok := m.(*proto.Error); return ok && e.Code == code }
+}
+
+func TestEditsReachEveryone(t *testing.T) {
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	a := dial(t, srv)
+	wa := a.join("Franco")
+	b := dial(t, srv)
+	b.join("Raymon")
+	b.waitPlayer(wa.ID)
+
+	a.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: world.Fence})
+	want := func(m proto.Msg) bool {
+		u, ok := m.(*proto.TileUpdate)
+		return ok && u.X == 4 && u.Y == 5 && u.Layer == world.Object && u.Tile == world.Fence
+	}
+	a.next("A's own TileUpdate", want)
+	b.next("B sees A's fence", want)
+}
+
+func TestEditOutsideTheSandboxIsRefused(t *testing.T) {
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	a := dial(t, srv)
+	a.join("Franco")
+	a.send(&proto.Edit{X: 6, Y: 5, Layer: world.Object, Tile: world.Fence})
+	a.next("ErrNotAllowed", isError(proto.ErrNotAllowed))
+}
+
+func TestEditFloodGetsRateLimited(t *testing.T) {
+	srv, _ := startServerWith(t, game.New(buildMap()), t.TempDir())
+	a := dial(t, srv)
+	a.join("Franco")
+	tiles := []world.TileID{world.Fence, world.None}
+	for i := 0; i < 20; i++ {
+		a.send(&proto.Edit{X: 4, Y: 5, Layer: world.Object, Tile: tiles[i%2]})
+	}
+	a.next("ErrRateLimited", isError(proto.ErrRateLimited))
 }

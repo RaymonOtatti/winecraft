@@ -5,6 +5,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -157,8 +158,18 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 		// client heartbeat: receiving it is the point
 	case *proto.Move:
 		h.state.Move(c.id, m.Dir, m.Seq, time.Now())
+	case *proto.Edit:
+		ch, err := h.state.Edit(c.id, int(m.X), int(m.Y), m.Layer, m.Tile, time.Now())
+		switch {
+		case errors.Is(err, game.ErrRateLimited):
+			h.sendTo(c, &proto.Error{Code: proto.ErrRateLimited})
+		case err != nil:
+			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
+		default:
+			h.broadcast(&proto.TileUpdate{X: int32(ch.X), Y: int32(ch.Y), Layer: ch.Layer, Tile: ch.Tile})
+		}
 	default:
-		// Edit arrives with B3.3; anything else from a client is ignored
+		// anything else from a client is ignored
 	}
 }
 

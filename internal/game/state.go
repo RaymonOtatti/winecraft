@@ -8,7 +8,6 @@ import (
 	"errors"
 	"slices"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/RaymonOtatti/winecraft/internal/world"
@@ -31,8 +30,8 @@ type Player struct {
 	Facing world.Dir
 	Seq    uint32 // last client move sequence applied
 
-	tokens     float64 // movement token bucket, see Move
-	lastRefill time.Time
+	steps bucket // movement rate limit, see Move
+	edits bucket // edit rate limit, see Edit
 }
 
 // State is the whole authoritative game.

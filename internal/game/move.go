@@ -28,7 +28,6 @@ func (s *State) Move(id uint32, d world.Dir, seq uint32, now time.Time) bool {
 	p.Facing = d
 	s.dirty[id] = true
 
-	p.refill(now)
 	step, ok := s.Map.World.CanStep(p.Pos.X, p.Pos.Y, d)
 	if !ok || !s.Map.Bounds.Contains(step.X, step.Y) {
 		return false
@@ -37,22 +36,9 @@ func (s *State) Move(id uint32, d world.Dir, seq uint32, now time.Time) bool {
 	if step.Hop {
 		cost = 2
 	}
-	if p.tokens < cost {
+	if !p.steps.take(now, StepInterval, StepBurst, cost) {
 		return false
 	}
-	p.tokens -= cost
 	p.Pos = world.Point{X: step.X, Y: step.Y}
 	return true
-}
-
-func (p *Player) refill(now time.Time) {
-	if p.lastRefill.IsZero() {
-		p.tokens = StepBurst
-		p.lastRefill = now
-		return
-	}
-	if el := now.Sub(p.lastRefill); el > 0 {
-		p.tokens = min(StepBurst, p.tokens+float64(el)/float64(StepInterval))
-		p.lastRefill = now
-	}
 }
