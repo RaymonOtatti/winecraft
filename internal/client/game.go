@@ -83,6 +83,7 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 	s := NewSession()
 	s.World, s.Me = m.World, NewWalker(m.World, pos)
 	s.Bounds, s.BuildZone, s.Joined = m.Bounds, m.BuildZone, true
+	s.Fog = world.NewFog(m.Bounds)
 	return s
 }
 
@@ -441,6 +442,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 	g.drawHUD(screen, pads)
+	g.drawMiniMap(screen)
 	if !panelOpen && (g.ShowDpad || g.Input.TouchSeen()) {
 		drawDpad(screen, pads.Dpad)
 		drawButton(screen, pads.Use, "A")
@@ -527,6 +529,38 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
 	}
 }
+
+func (g *Game) drawMiniMap(screen *ebiten.Image) {
+	if !g.S.Joined || g.S.Fog == nil {
+		return
+	}
+	// Discoverable map in the top-right corner. It scales to fit a fixed box
+	// so bigger dev maps do not cover the whole screen.
+	const maxW, maxH = 80, 80
+	bounds := g.S.Fog.Bounds()
+	scale := min(float64(maxW)/float64(bounds.W), float64(maxH)/float64(bounds.H))
+	mmW := float64(bounds.W) * scale
+	mmH := float64(bounds.H) * scale
+	margin := 4.0
+	x0 := float64(g.w) - mmW - margin
+	y0 := margin
+	vector.FillRect(screen, float32(x0), float32(y0), float32(mmW), float32(mmH), dim, false)
+	for y := 0; y < bounds.H; y++ {
+		for x := 0; x < bounds.W; x++ {
+			if g.S.Fog.Seen(bounds.X+x, bounds.Y+y) {
+				vector.FillRect(screen,
+					float32(x0+float64(x)*scale), float32(y0+float64(y)*scale),
+					float32(scale), float32(scale), cursorColor, false)
+			}
+		}
+	}
+	px := g.S.Me.Pos.X - bounds.X
+	py := g.S.Me.Pos.Y - bounds.Y
+	vector.FillRect(screen,
+		float32(x0+float64(px)*scale), float32(y0+float64(py)*scale),
+		float32(scale), float32(scale), cursorNo, false)
+}
+
 
 // panelRows lays out n inventory rows in a centred box.
 func panelRows(w, h, n int) []image.Rectangle {

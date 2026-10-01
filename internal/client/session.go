@@ -13,6 +13,7 @@ import (
 // server sends. Only the game goroutine touches it; the network goroutine
 // hands messages over through a channel.
 type Session struct {
+	Fog       *world.Fog // discovered-tile mask; server seeds it, client expands it
 	World     *world.World
 	Me        *Walker
 	MyID      uint32
@@ -51,6 +52,7 @@ func (s *Session) Apply(m proto.Msg) {
 		s.MyID, s.Joined = m.ID, true
 		s.Bounds, s.BuildZone = m.Bounds, m.BuildZone
 		s.Me.Reset(world.Point{X: int(m.X), Y: int(m.Y)})
+		s.Fog = world.NewFog(m.Bounds)
 		clear(s.Players)
 		s.Notice = ""
 	case *proto.Chunk:
@@ -59,6 +61,7 @@ func (s *Session) Apply(m proto.Msg) {
 		pos := world.Point{X: int(m.X), Y: int(m.Y)}
 		if m.ID == s.MyID {
 			s.Me.Reconcile(pos, m.Facing, m.Seq)
+			s.revealFogAround(pos)
 			return
 		}
 		r := s.Players[m.ID]
@@ -92,7 +95,20 @@ func (s *Session) Apply(m proto.Msg) {
 	case *proto.Chat:
 		s.ChatSeq++
 		s.Chat = m.Text
+	case *proto.Map:
+		s.Fog = world.NewFog(m.Bounds)
+		if s.Fog != nil {
+			s.Fog.SetBytes(m.Bits)
+		}
 	}
+}
+
+// revealFogAround clears fog around pos when the server confirms our position.
+func (s *Session) revealFogAround(pos world.Point) {
+	if s.Fog == nil {
+		return
+	}
+	s.Fog.Reveal(pos.X, pos.Y, 5)
 }
 
 // notify shows a message locally, the way server errors are shown.
@@ -101,10 +117,14 @@ func (s *Session) notify(text string) {
 	s.Notice = text
 }
 
-// Tick advances the other players' walking animations.
+// Tick advances the other players' walking animations and clears fog around us
+// every frame, so exploration feels immediate even before the server echoes back.
 func (s *Session) Tick(dt time.Duration) {
 	for _, r := range s.Players {
 		r.tick(dt)
+	}
+	if s.Fog != nil {
+		s.Fog.Reveal(s.Me.Pos.X, s.Me.Pos.Y, 5)
 	}
 }
 

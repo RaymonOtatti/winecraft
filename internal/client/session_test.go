@@ -103,6 +103,37 @@ func TestChatBumpsChatSeq(t *testing.T) {
 	}
 }
 
+func TestWelcomeCreatesFog(t *testing.T) {
+	s := welcomed(t)
+	if s.Fog == nil {
+		t.Fatal("Welcome must create a fog mask from the map bounds")
+	}
+	if s.Fog.Bounds() != (world.Rect{W: 10, H: 10}) {
+		t.Fatalf("fog bounds %v, want map bounds", s.Fog.Bounds())
+	}
+}
+
+func TestMapMessageRestoresFog(t *testing.T) {
+	s := welcomed(t)
+	bits := make([]byte, (10*10+7)/8)
+	bits[0] = 0xff // first 8 tiles seen
+	s.Apply(&proto.Map{Bounds: world.Rect{W: 10, H: 10}, Bits: bits})
+	if !s.Fog.Seen(0, 0) {
+		t.Fatal("Map must restore seen tiles")
+	}
+	if s.Fog.Seen(9, 9) {
+		t.Fatal("unseen tiles must stay hidden")
+	}
+}
+
+func TestOwnPlayerStateRevealsFog(t *testing.T) {
+	s := welcomed(t)
+	s.Apply(&proto.PlayerState{ID: 7, X: 8, Y: 8, Facing: world.South, Seq: 1, Name: "me"})
+	if !s.Fog.Seen(8, 8) {
+		t.Fatal("our own position from the server must reveal fog")
+	}
+}
+
 func TestReconnectWelcomeResetsEverything(t *testing.T) {
 	s := welcomed(t)
 	s.Apply(&proto.PlayerState{ID: 9, X: 2, Y: 2, Name: "Raymon"})
