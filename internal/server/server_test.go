@@ -248,3 +248,45 @@ func TestNameLimitsAgree(t *testing.T) {
 		t.Fatalf("game accepts %d-byte names but the protocol carries only %d", game.MaxNameLen, proto.MaxName)
 	}
 }
+
+func TestMovesAreValidatedAndBroadcast(t *testing.T) {
+	srv, _ := startServer(t, t.TempDir())
+	a := dial(t, srv)
+	wa := a.join("Franco")
+	b := dial(t, srv)
+	wb := b.join("Raymon")
+	b.waitPlayer(wa.ID)
+	a.waitPlayer(wb.ID)
+
+	a.send(&proto.Move{Dir: world.East, Seq: 1})
+	own := a.next("own state after move", func(m proto.Msg) bool {
+		ps, ok := m.(*proto.PlayerState)
+		return ok && ps.ID == wa.ID && ps.Seq == 1
+	}).(*proto.PlayerState)
+	if own.X != wa.X+1 || own.Y != wa.Y || own.Facing != world.East {
+		t.Fatalf("server moved A to (%d,%d) facing %v, want (%d,%d) East", own.X, own.Y, own.Facing, wa.X+1, wa.Y)
+	}
+	seen := b.next("A's move", func(m proto.Msg) bool {
+		ps, ok := m.(*proto.PlayerState)
+		return ok && ps.ID == wa.ID && ps.Seq == 1
+	}).(*proto.PlayerState)
+	if seen.X != own.X {
+		t.Fatalf("B sees A at x=%d, A is at x=%d", seen.X, own.X)
+	}
+}
+
+func TestSpeedHackOverTheNetworkIsCapped(t *testing.T) {
+	srv, _ := startServer(t, t.TempDir())
+	a := dial(t, srv)
+	wa := a.join("Franco")
+	for seq := uint32(1); seq <= 10; seq++ {
+		a.send(&proto.Move{Dir: world.East, Seq: seq})
+	}
+	final := a.next("state after seq 10", func(m proto.Msg) bool {
+		ps, ok := m.(*proto.PlayerState)
+		return ok && ps.ID == wa.ID && ps.Seq == 10
+	}).(*proto.PlayerState)
+	if moved := final.X - wa.X; moved > game.StepBurst+1 {
+		t.Fatalf("10 instant moves advanced %d tiles; the burst allows %d", moved, game.StepBurst)
+	}
+}

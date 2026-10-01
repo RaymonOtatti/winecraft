@@ -152,11 +152,13 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 	if h.clients[c.id] != c {
 		return // already gone
 	}
-	switch m.(type) {
+	switch m := m.(type) {
 	case *proto.Ping:
 		// client heartbeat: receiving it is the point
+	case *proto.Move:
+		h.state.Move(c.id, m.Dir, m.Seq, time.Now())
 	default:
-		// Move and Edit arrive with B3.2 and B3.3
+		// Edit arrives with B3.3; anything else from a client is ignored
 	}
 }
 

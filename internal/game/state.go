@@ -8,6 +8,7 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/RaymonOtatti/winecraft/internal/world"
@@ -29,6 +30,9 @@ type Player struct {
 	Pos    world.Point
 	Facing world.Dir
 	Seq    uint32 // last client move sequence applied
+
+	tokens     float64 // movement token bucket, see Move
+	lastRefill time.Time
 }
 
 // State is the whole authoritative game.
