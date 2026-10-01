@@ -387,8 +387,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	pads := NewPads(g.w, g.h, proto.HotbarSlots)
+	panelOpen := g.panel.Open || g.craft.Open
 	if g.S.Joined {
-		g.drawHotbar(screen, pads)
+		if !panelOpen {
+			g.drawHotbar(screen, pads)
+		}
 		if g.panel.Open {
 			g.drawPanel(screen)
 		}
@@ -397,7 +400,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 	g.drawHUD(screen, pads)
-	if g.ShowDpad || g.Input.TouchSeen() {
+	if !panelOpen && (g.ShowDpad || g.Input.TouchSeen()) {
 		drawDpad(screen, pads.Dpad)
 		drawButton(screen, pads.Use, "A")
 		drawButton(screen, pads.Build, "C")
@@ -449,6 +452,7 @@ var dim = color.NRGBA{0x1b, 0x14, 0x10, 0xc8}
 // drawHUD draws the connection status, who is online, the selected tile's
 // name and any notice. Before joining it dims the screen and says why.
 func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
+	panelOpen := g.panel.Open || g.craft.Open
 	state := Online
 	if g.Net != nil {
 		state = g.Net.State()
@@ -471,13 +475,13 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 			drawPlate(screen, n, g.w-4-6*len(n)-4, 17+i*12)
 		}
 	}
-	if HelpVisible(g.Prefs) && !g.panel.Open {
+	if HelpVisible(g.Prefs) && !panelOpen {
 		drawHelp(screen, 4, 47)
 	}
 	if t := g.toast.Text(time.Now()); t != "" {
 		drawPlate(screen, t, (g.w-6*len(t))/2, 33)
 	}
-	if len(p.Hotbar) > 0 {
+	if !panelOpen && len(p.Hotbar) > 0 {
 		label := HotbarLabel(g.S.Hotbar)
 		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
 	}
