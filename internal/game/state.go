@@ -31,6 +31,7 @@ type Player struct {
 	Facing world.Dir
 	Seq    uint32 // last client move sequence applied
 	Inv    map[world.ItemID]int
+	Hotbar [HotbarSlots]world.ItemID
 
 	token string // stable identity across reconnects and restarts; "" for anonymous
 
@@ -95,7 +96,7 @@ func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err erro
 		return nil, replaced, ErrFull
 	}
 	s.nextID++
-	p = &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int), token: token}
+	p = &Player{ID: s.nextID, Name: name, Pos: s.Map.Spawn, Facing: world.South, Inv: make(map[world.ItemID]int), Hotbar: DefaultHotbar, token: token}
 	if prof, ok := s.profiles[token]; ok && token != "" {
 		p.Facing = prof.Facing
 		if pos := (world.Point{X: prof.X, Y: prof.Y}); s.Map.Bounds.Contains(pos.X, pos.Y) && s.Map.World.Standable(pos.X, pos.Y) {
@@ -103,6 +104,9 @@ func (s *State) JoinAs(name, token string) (p *Player, replaced uint32, err erro
 		}
 		for it, n := range prof.Inv {
 			p.Inv[it] = n
+		}
+		if prof.Hotbar != ([HotbarSlots]world.ItemID{}) { // older saves have none
+			p.Hotbar = prof.Hotbar
 		}
 	} else {
 		for it, n := range StarterKit {

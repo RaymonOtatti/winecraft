@@ -384,3 +384,52 @@ func (c *cell) hash(x, y int) uint32 {
 }
 
 func rgb(r, g, b uint8) color.RGBA { return color.RGBA{R: r, G: g, B: b, A: 255} }
+
+// ItemRect is where item it's icon sits in the Items atlas.
+func ItemRect(it world.ItemID) image.Rectangle {
+	x, y := int(it)%AtlasCols*Tile, int(it)/AtlasCols*Tile
+	return image.Rect(x, y, x+Tile, y+Tile)
+}
+
+// Items draws an icon per item: a building material shows the tile it
+// builds; grapes get a bunch of their own.
+func Items() *image.RGBA {
+	rows := (world.NumItems() + AtlasCols - 1) / AtlasCols
+	img := image.NewRGBA(image.Rect(0, 0, AtlasCols*Tile, rows*Tile))
+	tiles := Atlas()
+	for id := 1; id < world.NumItems(); id++ {
+		it := world.ItemID(id)
+		c := &cell{img: img, o: ItemRect(it).Min, salt: uint32(id)}
+		if t := world.ItemDef(it).Places; t != world.None {
+			src := TileRect(t)
+			for y := 0; y < Tile; y++ {
+				for x := 0; x < Tile; x++ {
+					c.set(x, y, tiles.RGBAAt(src.Min.X+x, src.Min.Y+y))
+				}
+			}
+			continue
+		}
+		if it == world.ItemGrapes {
+			paintBunch(c)
+		}
+	}
+	return img
+}
+
+// paintBunch draws one hanging bunch of grapes with its stem and a leaf.
+func paintBunch(c *cell) {
+	c.set(8, 1, trunk)
+	c.set(8, 2, trunk)
+	c.rect(9, 1, 13, 4, leaf)
+	for y := 3; y < 15; y++ {
+		w := (15 - y) / 2
+		for x := 8 - w; x <= 8+w; x++ {
+			col := grape
+			if (x+y)%3 == 0 {
+				col = grapeLight
+			}
+			c.set(x, y, col)
+		}
+	}
+	c.outline()
+}

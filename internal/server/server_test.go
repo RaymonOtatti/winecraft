@@ -659,3 +659,35 @@ func TestSameTokenElsewhereReplacesTheOldConnection(t *testing.T) {
 	})
 	watcher.waitPlayer(wNew.ID)
 }
+
+func isHotbar(want [proto.HotbarSlots]world.ItemID) func(proto.Msg) bool {
+	return func(m proto.Msg) bool { h, ok := m.(*proto.Hotbar); return ok && h.Slots == want }
+}
+
+func TestHotbarSlotCountsAgree(t *testing.T) {
+	if game.HotbarSlots != proto.HotbarSlots {
+		t.Fatalf("game has %d hotbar slots, the protocol %d", game.HotbarSlots, proto.HotbarSlots)
+	}
+}
+
+func TestTheHotbarLayoutFollowsThePlayerAcrossARestart(t *testing.T) {
+	store := &memStore{}
+	srv1, hub1, stop1 := startCfg(t, game.New(buildMap()), Config{Store: store}, t.TempDir())
+	a := dial(t, srv1)
+	a.joinAs("Franco", tokenA)
+	a.next("the default hotbar on join", isHotbar(game.DefaultHotbar))
+	mine := [proto.HotbarSlots]world.ItemID{world.ItemGrapes, world.ItemNone, world.ItemStone, world.ItemStone}
+	a.send(&proto.Hotbar{Slots: mine})
+	a.send(&proto.Ping{Nonce: 1}) // make sure the hub saw the Hotbar before we stop it
+	time.Sleep(50 * time.Millisecond)
+	stop1()
+	<-hub1.done
+
+	state2 := game.New(buildMap())
+	saved, _ := store.Load()
+	state2.Restore(saved)
+	srv2, _, _ := startCfg(t, state2, Config{Store: store}, t.TempDir())
+	b := dial(t, srv2)
+	b.joinAs("Franco", tokenA)
+	b.next("my layout comes back", isHotbar(mine))
+}

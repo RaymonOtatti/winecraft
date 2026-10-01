@@ -101,3 +101,22 @@ func pixels(img *image.RGBA, r image.Rectangle) []byte {
 	}
 	return out
 }
+
+func TestEveryItemHasAnIcon(t *testing.T) {
+	a := Items()
+	seen := map[string]world.ItemID{}
+	for id := 1; id < world.NumItems(); id++ {
+		r := ItemRect(world.ItemID(id))
+		if opaquePixels(a, r) == 0 {
+			t.Errorf("item %s has no icon", world.ItemDef(world.ItemID(id)).Name)
+		}
+		key := string(pixels(a, r))
+		if prev, dup := seen[key]; dup {
+			t.Errorf("items %s and %s share an icon", world.ItemDef(prev).Name, world.ItemDef(world.ItemID(id)).Name)
+		}
+		seen[key] = world.ItemID(id)
+	}
+	if opaquePixels(a, ItemRect(world.ItemNone)) != 0 {
+		t.Error("ItemNone must be empty")
+	}
+}

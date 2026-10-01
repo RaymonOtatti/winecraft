@@ -84,10 +84,12 @@ func NewPads(w, h, n int) Pads {
 
 // Buttons is what was pressed this frame (besides walking).
 type Buttons struct {
-	Use, Build, Break bool
-	Help              bool // toggle the command side bar
-	Slot              int  // hotbar slot picked directly, or -1
-	Next, Prev        bool
+	Use, Build, Break  bool
+	Help               bool          // toggle the command side bar
+	Inv, Esc, Up, Down bool          // inventory panel
+	Taps               []image.Point // taps and clicks this frame, for the panel
+	Slot               int           // hotbar slot picked directly, or -1
+	Next, Prev         bool
 }
 
 // Input tracks which direction is held. With several keys down, the most
@@ -125,6 +127,13 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	b.Build = anyJustPressed(keysBuild)
 	b.Break = anyJustPressed(keysBreak)
 	b.Help = inpututil.IsKeyJustPressed(ebiten.KeyH)
+	b.Inv = inpututil.IsKeyJustPressed(ebiten.KeyI) || inpututil.IsKeyJustPressed(ebiten.KeyTab)
+	b.Esc = inpututil.IsKeyJustPressed(ebiten.KeyEscape)
+	b.Up = inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW)
+	b.Down = inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS)
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		b.Taps = append(b.Taps, image.Pt(ebiten.CursorPosition()))
+	}
 	for i, k := range keysSlot {
 		if inpututil.IsKeyJustPressed(k) {
 			b.Slot = i
@@ -139,7 +148,9 @@ func (in *Input) PollButtons(p Pads) Buttons {
 	}
 	in.justIDs = inpututil.AppendJustPressedTouchIDs(in.justIDs[:0])
 	for _, id := range in.justIDs {
-		pt := image.Pt(ebiten.TouchPosition(id))
+		b.Taps = append(b.Taps, image.Pt(ebiten.TouchPosition(id)))
+	}
+	for _, pt := range b.Taps {
 		switch {
 		case pt.In(p.Use.Inset(-4)):
 			b.Use = true

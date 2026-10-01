@@ -7,14 +7,11 @@ import (
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
 
-func TestHotbarHoldsThePlaceableTiles(t *testing.T) {
+func TestHotbarStartsWithTheBuildingMaterials(t *testing.T) {
 	h := NewHotbar()
-	if len(h.Slots) == 0 {
-		t.Fatal("empty hotbar")
-	}
-	for _, id := range h.Slots {
-		if !world.Def(id).Placeable {
-			t.Errorf("slot holds %s, which cannot be placed", world.Def(id).Name)
+	for i, it := range h.Slots {
+		if world.ItemDef(it).Places == world.None {
+			t.Errorf("default slot %d holds %s, which builds nothing", i+1, world.ItemDef(it).Name)
 		}
 	}
 	h.Select(1)

@@ -55,7 +55,7 @@ func TestRefusedActionsSayWhy(t *testing.T) {
 		s.Apply(&proto.Inventory{Items: []proto.Item{{ID: world.ItemFence, Count: 5}}})
 		c.setup(s)
 		var sent bool
-		got := notified(s, func() { _, sent = s.Act(c.a, world.Fence) })
+		got := notified(s, func() { _, sent = s.Act(c.a, world.ItemFence) })
 		if sent || got != c.want {
 			t.Errorf("%s: sent=%v notice %q, want %q", c.name, sent, got, c.want)
 		}
@@ -66,7 +66,7 @@ func TestNoNoticeWhileWalking(t *testing.T) {
 	s := builder(t)
 	s.Me.Facing = world.West
 	hold(s.Me, world.West, StepDuration/2)
-	if got := notified(s, func() { s.Act(ActionBuild, world.Fence) }); got != "" {
+	if got := notified(s, func() { s.Act(ActionBuild, world.ItemFence) }); got != "" {
 		t.Fatalf("mid-step presses are ignored quietly, got notice %q", got)
 	}
 }

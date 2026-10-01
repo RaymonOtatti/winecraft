@@ -31,6 +31,7 @@ func samples() []Msg {
 		&TileUpdate{X: 12, Y: 80, Layer: world.Object, Tile: world.None},
 		&Inventory{Items: []Item{{ID: world.ItemGrapes, Count: 3}, {ID: world.ItemStone, Count: 12}}},
 		&Interact{X: 6, Y: -5},
+		&Hotbar{Slots: [HotbarSlots]world.ItemID{world.ItemStone, world.ItemNone, world.ItemGrapes, world.ItemFence}},
 		&Inventory{},
 		&Ping{Nonce: 99},
 		&Error{Code: ErrBadJoinCode, Text: "código incorrecto"},
@@ -95,6 +96,7 @@ func TestDecodeRejectsMalformedInput(t *testing.T) {
 		"bad layer":      mustEncodeRaw(t, TypeEdit, func(w *writer) { w.i32(1); w.i32(1); w.u8(7); w.u16(uint16(world.Fence)) }),
 		"inventory lies": {byte(TypeInventory), 5, 0, 0},
 		"unknown item":   {byte(TypeInventory), 1, 200, 0, 1, 0},
+		"hotbar unknown": {byte(TypeHotbar), 1, 0, 2, 0, 200, 0, 3, 0},
 	}
 	for name, b := range cases {
 		if _, err := Decode(b); err == nil {

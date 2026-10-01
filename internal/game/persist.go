@@ -49,6 +49,7 @@ type Profile struct {
 	X, Y   int
 	Facing world.Dir
 	Inv    map[world.ItemID]int
+	Hotbar [HotbarSlots]world.ItemID
 }
 
 var tokenRE = regexp.MustCompile(`^[0-9a-f]{32}$`)
@@ -64,7 +65,7 @@ func profileOf(p *Player) Profile {
 			inv[it] = n
 		}
 	}
-	return Profile{Name: p.Name, X: p.Pos.X, Y: p.Pos.Y, Facing: p.Facing, Inv: inv}
+	return Profile{Name: p.Name, X: p.Pos.X, Y: p.Pos.Y, Facing: p.Facing, Inv: inv, Hotbar: p.Hotbar}
 }
 
 // Save captures the game. Online players are saved as they are right now.

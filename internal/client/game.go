@@ -29,7 +29,6 @@ type Game struct {
 	S      *Session
 	Net    *Net // nil when playing offline
 	Input  Input
-	Hotbar *Hotbar
 	MyName string
 	Prefs  Prefs // per-device settings; NewGame starts with memory-only
 
@@ -48,6 +47,8 @@ type Game struct {
 
 	script  []scriptStep
 	tiles   [64]*ebiten.Image // sub-images of one atlas, so draws batch
+	icons   [64]*ebiten.Image // item icons, one atlas
+	panel   InvPanel
 	player  [4][2]*ebiten.Image
 	w, h    int
 	frame   int
@@ -83,7 +84,11 @@ func OfflineSession(m *world.DevMap, pos world.Point) *Session {
 
 // NewGame prepares the art for session s; n is nil when offline.
 func NewGame(s *Session, n *Net) *Game {
-	g := &Game{S: s, Net: n, Hotbar: NewHotbar(), Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH}
+	g := &Game{S: s, Net: n, Prefs: MemPrefs{}, SnapFrame: 30, w: BaseW, h: BaseH}
+	icons := ebiten.NewImageFromImage(art.Items())
+	for id := 1; id < world.NumItems(); id++ {
+		g.icons[id] = icons.SubImage(art.ItemRect(world.ItemID(id))).(*ebiten.Image)
+	}
 	atlas := ebiten.NewImageFromImage(art.Atlas())
 	for id := 1; id < world.NumTiles(); id++ {
 		g.tiles[id] = atlas.SubImage(art.TileRect(world.TileID(id))).(*ebiten.Image)
@@ -98,8 +103,9 @@ func NewGame(s *Session, n *Net) *Game {
 }
 
 // Script runs a fixed sequence for snapshots, e.g. "S36,W14,H2,C,Z60":
-// N/S/W/E<n> walk n steps, A uses, C builds, X breaks, H<n> picks hotbar
-// slot n, Z<n> waits n ticks. The snapshot is taken after it ends.
+// N/S/W/E<n> walk n steps, A uses, C builds, X breaks, I toggles the
+// inventory, H<n> picks hotbar slot n (or, with the inventory open, puts the
+// highlighted item there), Z<n> waits n ticks. The snapshot is taken after.
 func (g *Game) Script(route string) error {
 	tps := ebiten.DefaultTPS
 	for _, part := range strings.Split(route, ",") {
@@ -112,6 +118,9 @@ func (g *Game) Script(route string) error {
 			continue
 		case part == "C": // build
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Build: true, Slot: -1}})
+			continue
+		case part == "I": // inventory panel
+			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Inv: true, Slot: -1}})
 			continue
 		case part == "X", part == "B": // break
 			g.script = append(g.script, scriptStep{kind: scriptButton, btn: Buttons{Break: true, Slot: -1}})
@@ -195,8 +204,15 @@ func (g *Game) Update() error {
 			g.Input.ScriptDir, g.Input.ScriptHeld = st.dir, true
 		}
 	}
-	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
+	pads := NewPads(g.w, g.h, proto.HotbarSlots)
+	b := g.Input.PollButtons(pads)
+	if b.Inv {
+		g.panel.Toggle()
+	}
 	dir, held := g.Input.Poll(pads.Dpad)
+	if g.panel.Open {
+		held = false // the open panel takes the arrows
+	}
 	m, sent := g.S.Me.Update(dt, dir, held)
 	if sent && g.Net != nil {
 		g.Net.Send(&proto.Move{Dir: m.Dir, Seq: m.Seq})
@@ -210,28 +226,56 @@ func (g *Game) Update() error {
 		}
 	}
 
-	b := g.Input.PollButtons(pads)
 	if b.Help {
 		SetHelpVisible(g.Prefs, !HelpVisible(g.Prefs))
 	}
-	g.Hotbar.Select(b.Slot)
+	if g.panel.Open {
+		g.updatePanel(b)
+		return nil
+	}
+	g.S.Hotbar.Select(b.Slot)
 	if b.Next {
-		g.Hotbar.Next()
+		g.S.Hotbar.Next()
 	}
 	if b.Prev {
-		g.Hotbar.Prev()
+		g.S.Hotbar.Prev()
 	}
 	for _, act := range []struct {
 		pressed bool
 		a       Action
 	}{{b.Use, ActionUse}, {b.Build, ActionBuild}, {b.Break, ActionBreak}} {
 		if act.pressed {
-			if m, ok := g.S.Act(act.a, g.Hotbar.Selected()); ok {
+			if m, ok := g.S.Act(act.a, g.S.Hotbar.Selected()); ok {
 				g.send(m)
 			}
 		}
 	}
 	return nil
+}
+
+// updatePanel handles input while the inventory panel is open: arrows move
+// the highlight, 1-4 (or a tap on a slot) put the item there, a tap on a row
+// highlights it, Esc closes.
+func (g *Game) updatePanel(b Buttons) {
+	if b.Up {
+		g.panel.Move(g.S, -1)
+	}
+	if b.Down {
+		g.panel.Move(g.S, +1)
+	}
+	for _, t := range b.Taps {
+		for i, r := range panelRows(g.w, g.h, len(g.panel.Items(g.S))) {
+			if t.In(r) {
+				g.panel.Select(g.S, i)
+			}
+		}
+	}
+	if hb, ok := g.panel.Assign(g.S, b.Slot); ok {
+		g.send(hb)
+	}
+	if b.Esc {
+		g.panel.Open = false
+	}
 }
 
 func (g *Game) nextScriptStep() {
@@ -318,9 +362,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		vector.StrokeRect(screen, float32(math.Round(cx))+0.5, float32(math.Round(cy))+0.5, art.Tile-1, art.Tile-1, 1, col, false)
 	}
 
-	pads := NewPads(g.w, g.h, len(g.Hotbar.Slots))
+	pads := NewPads(g.w, g.h, proto.HotbarSlots)
 	if g.S.Joined {
 		g.drawHotbar(screen, pads)
+		if g.panel.Open {
+			g.drawPanel(screen)
+		}
 	}
 	g.drawHUD(screen, pads)
 	if g.ShowDpad || g.Input.TouchSeen() {
@@ -357,12 +404,14 @@ func (g *Game) drawHotbar(screen *ebiten.Image, p Pads) {
 		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotBack, false)
 		op.GeoM.Reset()
 		op.GeoM.Translate(float64(r.Min.X+(r.Dx()-art.Tile)/2), float64(r.Min.Y+(r.Dy()-art.Tile)/2))
-		screen.DrawImage(g.tiles[g.Hotbar.Slots[i]], &op)
+		if it := g.S.Hotbar.Slots[i]; it != world.ItemNone && g.icons[it] != nil {
+			screen.DrawImage(g.icons[it], &op)
+		}
 		if g.Net != nil {
-			n := fmt.Sprint(g.S.CountFor(g.Hotbar.Slots[i]))
+			n := fmt.Sprint(g.S.CountFor(g.S.Hotbar.Slots[i]))
 			ebitenutil.DebugPrintAt(screen, n, r.Max.X-6*len(n)-1, r.Max.Y-14)
 		}
-		if i == g.Hotbar.Index() {
+		if i == g.S.Hotbar.Index() {
 			vector.StrokeRect(screen, float32(r.Min.X)+1, float32(r.Min.Y)+1, float32(r.Dx())-2, float32(r.Dy())-2, 2, slotPick, false)
 		}
 	}
@@ -395,15 +444,56 @@ func (g *Game) drawHUD(screen *ebiten.Image, p Pads) {
 			drawPlate(screen, n, g.w-4-6*len(n)-4, 17+i*12)
 		}
 	}
-	if HelpVisible(g.Prefs) {
+	if HelpVisible(g.Prefs) && !g.panel.Open {
 		drawHelp(screen, 4, 47)
 	}
 	if t := g.toast.Text(time.Now()); t != "" {
 		drawPlate(screen, t, (g.w-6*len(t))/2, 33)
 	}
 	if len(p.Hotbar) > 0 {
-		label := HotbarLabel(g.Hotbar)
+		label := HotbarLabel(g.S.Hotbar)
 		drawPlate(screen, label, (g.w-6*len(label))/2-2, p.Hotbar[0].Min.Y-14)
+	}
+}
+
+// panelRows lays out n inventory rows in a centred box.
+func panelRows(w, h, n int) []image.Rectangle {
+	const rowH, width = 18, 168
+	top := max(48, (h-n*rowH)/2)
+	out := make([]image.Rectangle, n)
+	for i := range out {
+		x, y := (w-width)/2, top+i*rowH
+		out[i] = image.Rect(x, y, x+width, y+rowH)
+	}
+	return out
+}
+
+func (g *Game) drawPanel(screen *ebiten.Image) {
+	items := g.panel.Items(g.S)
+	rows := panelRows(g.w, g.h, len(items))
+	title := "Inventario: 1-4 pone en la barra, I cierra"
+	if len(items) == 0 {
+		title = "Inventario vacio (I cierra)"
+	}
+	box := image.Rect((g.w-176)/2, 30, (g.w+176)/2, 46)
+	if len(rows) > 0 {
+		box = box.Union(rows[len(rows)-1].Inset(-4))
+	}
+	vector.FillRect(screen, float32(box.Min.X), float32(box.Min.Y), float32(box.Dx()), float32(box.Dy()), dim, false)
+	drawText(screen, title, (g.w-6*len(title))/2, 33)
+	var op ebiten.DrawImageOptions
+	for i, it := range items {
+		r := rows[i]
+		if i == g.panel.Cursor(g.S) {
+			vector.StrokeRect(screen, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx())-1, float32(r.Dy())-1, 1, slotPick, false)
+		}
+		op.GeoM.Reset()
+		op.GeoM.Translate(float64(r.Min.X+2), float64(r.Min.Y+1))
+		if g.icons[it] != nil {
+			screen.DrawImage(g.icons[it], &op)
+		}
+		label := fmt.Sprintf("%-16s %3d", DisplayName(world.ItemDef(it).Name), g.S.CountFor(it))
+		drawText(screen, label, r.Min.X+22, r.Min.Y+4)
 	}
 }
 

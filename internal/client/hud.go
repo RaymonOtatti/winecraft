@@ -44,8 +44,13 @@ func PlayerList(s *Session, me string) []string {
 	return append([]string{DisplayName(me) + " (vos)"}, others...)
 }
 
-// HotbarLabel names the selected tile.
-func HotbarLabel(h *Hotbar) string { return DisplayName(world.Def(h.Selected()).Name) }
+// HotbarLabel names the selected item.
+func HotbarLabel(h *Hotbar) string {
+	if h.Selected() == world.ItemNone {
+		return "(vacio)"
+	}
+	return DisplayName(world.ItemDef(h.Selected()).Name)
+}
 
 // ToastFor is how long a notice stays on screen.
 const ToastFor = 3 * time.Second

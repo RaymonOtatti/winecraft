@@ -67,10 +67,10 @@ func TestToastShowsForAWhile(t *testing.T) {
 	}
 }
 
-func TestHotbarLabelNamesTheSelectedTile(t *testing.T) {
+func TestHotbarLabelNamesTheSelectedItem(t *testing.T) {
 	h := NewHotbar()
 	h.Select(2)
-	if got := HotbarLabel(h); got != DisplayName(world.Def(h.Selected()).Name) {
+	if got := HotbarLabel(h); got != DisplayName(world.ItemDef(h.Selected()).Name) {
 		t.Fatalf("label %q", got)
 	}
 }

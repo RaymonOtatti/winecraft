@@ -21,14 +21,15 @@ type Session struct {
 	BuildZone world.Rect
 	Players   map[uint32]*Remote
 	Inv       map[world.ItemID]int // what the server says we carry
-	Notice    string               // the last server error, for the HUD
-	NoticeSeq int                  // bumps on every error, so the same message can toast twice
+	Hotbar    *Hotbar
+	Notice    string // the last server error, for the HUD
+	NoticeSeq int    // bumps on every error, so the same message can toast twice
 }
 
 // NewSession starts empty, waiting for a Welcome.
 func NewSession() *Session {
 	w := world.New()
-	return &Session{World: w, Me: NewWalker(w, world.Point{}), Players: make(map[uint32]*Remote), Inv: make(map[world.ItemID]int)}
+	return &Session{World: w, Me: NewWalker(w, world.Point{}), Players: make(map[uint32]*Remote), Inv: make(map[world.ItemID]int), Hotbar: NewHotbar()}
 }
 
 var errorText = map[uint8]string{
@@ -73,6 +74,8 @@ func (s *Session) Apply(m proto.Msg) {
 		} else {
 			s.World.Set(int(m.X), int(m.Y), m.Tile)
 		}
+	case *proto.Hotbar:
+		s.Hotbar.Slots = m.Slots
 	case *proto.Inventory:
 		clear(s.Inv)
 		for _, it := range m.Items {

@@ -204,6 +204,7 @@ func (h *Hub) join(c *client, name, token string) error {
 			h.sendTo(c, playerState(*other))
 		}
 	}
+	h.sendTo(c, &proto.Hotbar{Slots: p.Hotbar})
 	h.cfg.Log.Info("player joined", "id", p.ID, "name", p.Name, "ip", c.ip, "online", len(h.clients))
 	return nil
 }
@@ -235,6 +236,10 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 	case *proto.Interact:
 		ch, err := h.state.Harvest(c.id, int(m.X), int(m.Y), time.Now())
 		h.reply(c, ch, err)
+	case *proto.Hotbar:
+		if h.state.SetHotbar(c.id, m.Slots) != nil {
+			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
+		}
 	default:
 		// anything else from a client is ignored
 	}

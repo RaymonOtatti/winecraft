@@ -5,21 +5,17 @@ import (
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
 
-// Hotbar is the row of tiles the player can place.
+// Hotbar is the row of items under keys 1-4. The server decides what each
+// slot holds (and saves it); the client only picks the selected slot.
 type Hotbar struct {
-	Slots []world.TileID
+	Slots [proto.HotbarSlots]world.ItemID
 	sel   int
 }
 
-// NewHotbar holds every placeable tile, in registry order.
+// NewHotbar starts with the building materials; the server's Hotbar
+// message replaces it on join.
 func NewHotbar() *Hotbar {
-	h := &Hotbar{}
-	for id := 1; id < world.NumTiles(); id++ {
-		if world.Def(world.TileID(id)).Placeable {
-			h.Slots = append(h.Slots, world.TileID(id))
-		}
-	}
-	return h
+	return &Hotbar{Slots: [proto.HotbarSlots]world.ItemID{world.ItemPlanks, world.ItemFence, world.ItemStone, world.ItemCrate}}
 }
 
 // Select picks slot i; out-of-range does nothing.
@@ -32,7 +28,7 @@ func (h *Hotbar) Select(i int) {
 func (h *Hotbar) Next()                  { h.sel = (h.sel + 1) % len(h.Slots) }
 func (h *Hotbar) Prev()                  { h.sel = (h.sel + len(h.Slots) - 1) % len(h.Slots) }
 func (h *Hotbar) Index() int             { return h.sel }
-func (h *Hotbar) Selected() world.TileID { return h.Slots[h.sel] }
+func (h *Hotbar) Selected() world.ItemID { return h.Slots[h.sel] }
 
 // Action is what a button does to the faced tile.
 type Action int
@@ -92,19 +88,13 @@ func (s *Session) EditFor(a Action, tile world.TileID) (*proto.Edit, bool) {
 	return e, true
 }
 
-// CountFor is how many of the item that places tile we carry.
-func (s *Session) CountFor(tile world.TileID) int {
-	it, ok := world.ItemForTile(tile)
-	if !ok {
-		return 0
-	}
-	return s.Inv[it]
-}
+// CountFor is how many of item we carry.
+func (s *Session) CountFor(it world.ItemID) int { return s.Inv[it] }
 
 // Act turns a button press into the message to send. When the action can't
 // happen it says why in a notice and sends nothing (presses mid-step are
 // ignored quietly). The server still validates everything.
-func (s *Session) Act(a Action, tile world.TileID) (proto.Msg, bool) {
+func (s *Session) Act(a Action, item world.ItemID) (proto.Msg, bool) {
 	if !s.Joined || s.Me.Moving() {
 		return nil, false
 	}
@@ -124,14 +114,19 @@ func (s *Session) Act(a Action, tile world.TileID) (proto.Msg, bool) {
 			s.notify("No hay nada para romper")
 		}
 	case ActionBuild:
+		tile := world.ItemDef(item).Places
 		switch {
+		case item == world.ItemNone:
+			s.notify("Ese espacio está vacío")
+		case tile == world.None:
+			s.notify("Eso no se puede construir")
 		case !s.inZone(p):
 			s.notify("Acá no se puede construir")
 		case s.World.At(world.Object, p.X, p.Y) != world.None:
 			s.notify("Ese lugar está ocupado")
 		case !s.openGround(p):
 			s.notify("No se puede construir sobre eso")
-		case s.CountFor(tile) < 1:
+		case s.CountFor(item) < 1:
 			s.notify(errorText[proto.ErrNoMaterial])
 		default:
 			return s.EditFor(ActionBuild, tile)
