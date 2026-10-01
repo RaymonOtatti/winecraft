@@ -101,7 +101,7 @@ func (s *Session) Act(a Action, item world.ItemID) (proto.Msg, bool) {
 	p := s.Target()
 	switch a {
 	case ActionUse:
-		if s.World.At(world.Object, p.X, p.Y) == world.Vine {
+		if world.Def(s.World.At(world.Object, p.X, p.Y)).Gather != world.ItemNone {
 			return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
 		}
 		s.notify("No hay nada para usar acá")

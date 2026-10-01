@@ -8,11 +8,11 @@ import (
 	"github.com/RaymonOtatti/winecraft/internal/world"
 )
 
-// Game tuning for the dev map, not real-world facts.
-const (
-	GrapesPerHarvest = 2
-	RegrowAfter      = 2 * time.Minute
-)
+// RegrowAfter is game tuning for the dev map, not a real-world fact.
+const RegrowAfter = 2 * time.Minute
+
+// GrapesPerHarvest is what one vine gives (from the tile registry).
+var GrapesPerHarvest = world.Def(world.Vine).GatherN
 
 // StarterKit is what every new player carries, so building can start at once.
 var StarterKit = map[world.ItemID]int{
@@ -47,9 +47,10 @@ type regrowth struct {
 	when time.Time
 }
 
-// Harvest picks the grapes of the vine at (x, y), next to the player. The vine
-// stays, harvested, and bears again after RegrowAfter: harvesting must never
-// destroy a vineyard. It shares the edit rate limit.
+// Harvest gathers from the tile at (x, y), next to the player: grapes from a
+// vine, and whatever else the tile registry says a tile yields. The tile
+// stays, spent, and grows back after RegrowAfter: gathering never destroys a
+// vineyard or a quarry. It shares the edit rate limit.
 func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 	p := s.players[id]
 	if p == nil {
@@ -58,13 +59,14 @@ func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 	if !p.edits.Take(now, EditInterval, EditBurst, 1) {
 		return Change{}, ErrRateLimited
 	}
-	if manhattan(p.Pos, world.Point{X: x, Y: y}) != 1 || s.Map.World.At(world.Object, x, y) != world.Vine {
+	def := world.Def(s.Map.World.At(world.Object, x, y))
+	if manhattan(p.Pos, world.Point{X: x, Y: y}) != 1 || def.Gather == world.ItemNone || def.Spent == world.None {
 		return Change{}, ErrNotAllowed
 	}
-	s.Map.World.Set(x, y, world.VineHarvested)
+	s.Map.World.Set(x, y, def.Spent)
 	s.regrow = append(s.regrow, regrowth{at: world.Point{X: x, Y: y}, when: now.Add(RegrowAfter)})
-	s.give(p, world.ItemGrapes, GrapesPerHarvest)
-	return Change{X: x, Y: y, Layer: world.Object, Tile: world.VineHarvested}, nil
+	s.give(p, def.Gather, def.GatherN)
+	return Change{X: x, Y: y, Layer: world.Object, Tile: def.Spent}, nil
 }
 
 // Tick advances timed world changes (vines regrowing) and returns what changed.
@@ -76,9 +78,9 @@ func (s *State) Tick(now time.Time) []Change {
 			kept = append(kept, r)
 			continue
 		}
-		if s.Map.World.At(world.Object, r.at.X, r.at.Y) == world.VineHarvested {
-			s.Map.World.Set(r.at.X, r.at.Y, world.Vine)
-			out = append(out, Change{X: r.at.X, Y: r.at.Y, Layer: world.Object, Tile: world.Vine})
+		if to := world.Def(s.Map.World.At(world.Object, r.at.X, r.at.Y)).RegrowsTo; to != world.None {
+			s.Map.World.Set(r.at.X, r.at.Y, to)
+			out = append(out, Change{X: r.at.X, Y: r.at.Y, Layer: world.Object, Tile: to})
 		}
 	}
 	s.regrow = kept

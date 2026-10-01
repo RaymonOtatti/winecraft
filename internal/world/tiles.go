@@ -53,6 +53,14 @@ type TileDef struct {
 	Breakable bool   // can be removed in a build zone
 	Placeable bool   // can be placed from the hotbar in a build zone
 	Drop      TileID // what breaking it gives back; None for nothing
+
+	// Gathering (Use on it, anywhere): it gives GatherN of Gather, turns into
+	// Spent, and Spent grows back into it after a while (RegrowsTo). Gathered
+	// things are never breakable: a vineyard or a quarry is never used up.
+	Gather    ItemID
+	GatherN   int
+	Spent     TileID
+	RegrowsTo TileID
 }
 
 var defs = [numTiles]TileDef{
@@ -66,8 +74,8 @@ var defs = [numTiles]TileDef{
 	Bridge:        {ID: Bridge, Name: "Puente", Layer: Ground, Walkable: true},
 	LedgeSouth:    {ID: LedgeSouth, Name: "Desnivel", Layer: Ground, Walkable: true},
 	Planks:        {ID: Planks, Name: "Tablones", Layer: Ground, Walkable: true, Breakable: true, Placeable: true, Drop: Planks},
-	Vine:          {ID: Vine, Name: "Vid", Layer: Object},
-	VineHarvested: {ID: VineHarvested, Name: "Vid cosechada", Layer: Object},
+	Vine:          {ID: Vine, Name: "Vid", Layer: Object, Gather: ItemGrapes, GatherN: 2, Spent: VineHarvested},
+	VineHarvested: {ID: VineHarvested, Name: "Vid cosechada", Layer: Object, RegrowsTo: Vine},
 	Poplar:        {ID: Poplar, Name: "Álamo", Layer: Object},
 	Fence:         {ID: Fence, Name: "Cerca", Layer: Object, Breakable: true, Placeable: true, Drop: Fence},
 	StoneWall:     {ID: StoneWall, Name: "Pared de piedra", Layer: Object, Breakable: true, Placeable: true, Drop: StoneWall},

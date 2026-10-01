@@ -23,11 +23,12 @@ const SaveVersion = 1
 // chunks that changed since the map was generated, vines waiting to regrow,
 // and the progress of every player who has a token.
 type Saved struct {
-	Version  int
-	SavedAt  time.Time
-	Chunks   []SavedChunk
-	Regrow   []SavedRegrow
-	Profiles map[string]Profile
+	Version   int
+	SavedAt   time.Time
+	MapDigest string `json:",omitempty"` // the layout the chunks belong to
+	Chunks    []SavedChunk
+	Regrow    []SavedRegrow
+	Profiles  map[string]Profile
 }
 
 // SavedChunk is one changed chunk; each layer is ChunkSize² little-endian
@@ -70,7 +71,7 @@ func profileOf(p *Player) Profile {
 
 // Save captures the game. Online players are saved as they are right now.
 func (s *State) Save(now time.Time) *Saved {
-	sv := &Saved{Version: SaveVersion, SavedAt: now, Profiles: make(map[string]Profile, len(s.profiles))}
+	sv := &Saved{Version: SaveVersion, SavedAt: now, MapDigest: s.mapDigest, Profiles: make(map[string]Profile, len(s.profiles))}
 	for tok, prof := range s.profiles {
 		sv.Profiles[tok] = prof
 	}
@@ -97,6 +98,12 @@ func (s *State) Save(now time.Time) *Saved {
 func (s *State) Restore(sv *Saved) error {
 	if sv.Version != SaveVersion {
 		return fmt.Errorf("saved game version %d, this server reads %d", sv.Version, SaveVersion)
+	}
+	// Chunks and timers saved on another map layout would be pasted onto the
+	// wrong terrain: drop them, keep the players. (Older saves have no digest.)
+	if sv.MapDigest != "" && sv.MapDigest != s.mapDigest {
+		s.MapChanged = true
+		sv = &Saved{Version: sv.Version, Profiles: sv.Profiles}
 	}
 	for _, sc := range sv.Chunks {
 		var layers [world.NumLayers][world.ChunkSize * world.ChunkSize]world.TileID

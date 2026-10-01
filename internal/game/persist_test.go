@@ -122,3 +122,36 @@ func sameInv(a, b map[world.ItemID]int) bool {
 	}
 	return true
 }
+
+func TestAChangedMapKeepsPlayersButDropsStaleWorldEdits(t *testing.T) {
+	s1 := New(world.GenerateDevMap(1))
+	p, _, _ := s1.JoinAs("Franco", tokA)
+	p.Inv[world.ItemGrapes] = 12
+	s1.Map.World.Set(60, 60, world.Crate)
+	saved := s1.Save(t0)
+
+	s2 := New(world.GenerateDevMap(2)) // a different layout: the save's chunks no longer fit
+	if err := s2.Restore(saved); err != nil {
+		t.Fatal(err)
+	}
+	if s2.Map.World.At(world.Object, 60, 60) == world.Crate {
+		t.Fatal("chunks saved for another map layout must not be pasted onto this one")
+	}
+	if !s2.MapChanged {
+		t.Fatal("Restore must report that the map changed")
+	}
+	q, _, _ := s2.JoinAs("Franco", tokA)
+	if q.Inv[world.ItemGrapes] != 12 {
+		t.Fatal("players keep their progress when the map changes")
+	}
+}
+
+func TestTheSameMapRestoresItsEdits(t *testing.T) {
+	s1 := New(world.GenerateDevMap(1))
+	s1.Map.World.Set(60, 60, world.Crate)
+	s2 := New(world.GenerateDevMap(1))
+	s2.Restore(s1.Save(t0))
+	if s2.MapChanged || s2.Map.World.At(world.Object, 60, 60) != world.Crate {
+		t.Fatal("same layout: edits come back")
+	}
+}

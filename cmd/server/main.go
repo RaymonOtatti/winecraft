@@ -53,6 +53,9 @@ func main() {
 				os.Exit(1)
 			}
 			log.Info("restored the saved game", "path", *dataPath, "saved_at", saved.SavedAt, "players", len(saved.Profiles), "chunks", len(saved.Chunks))
+			if state.MapChanged {
+				log.Warn("the map layout changed since this save: players kept, old world edits dropped")
+			}
 		}
 		store = fs
 	}

@@ -133,3 +133,24 @@ func TestModifiedTracksChangesSinceTheBaseline(t *testing.T) {
 		t.Fatalf("Modified = %v, want just chunk (1,0)", got)
 	}
 }
+
+func TestGatherableTilesAreConsistent(t *testing.T) {
+	for id := 1; id < NumTiles(); id++ {
+		d := Def(TileID(id))
+		if d.Gather == ItemNone {
+			continue
+		}
+		if d.GatherN < 1 || int(d.Gather) >= NumItems() {
+			t.Errorf("%s gathers %d of item %d", d.Name, d.GatherN, d.Gather)
+		}
+		if d.Spent == None || Def(d.Spent).RegrowsTo != TileID(id) {
+			t.Errorf("%s must turn into a spent tile that regrows back into it", d.Name)
+		}
+		if d.Breakable {
+			t.Errorf("%s is gathered, so it must never be breakable (a vineyard is never destroyed)", d.Name)
+		}
+	}
+	if Def(Vine).Gather != ItemGrapes || Def(Vine).Spent != VineHarvested {
+		t.Error("vines give grapes and become harvested vines")
+	}
+}

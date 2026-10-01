@@ -5,6 +5,7 @@
 package game
 
 import (
+	"encoding/hex"
 	"errors"
 	"slices"
 	"strings"
@@ -43,20 +44,26 @@ type Player struct {
 type State struct {
 	Map        *world.DevMap
 	MaxPlayers int
+	// MapChanged is set by Restore when the save was made on another map
+	// layout: players were kept, world edits dropped.
+	MapChanged bool
 
-	players  map[uint32]*Player
-	dirty    map[uint32]bool
-	invDirty map[uint32]bool
-	regrow   []regrowth
-	profiles map[string]Profile // saved progress by token, for players not online
-	nextID   uint32
+	players   map[uint32]*Player
+	dirty     map[uint32]bool
+	invDirty  map[uint32]bool
+	regrow    []regrowth
+	profiles  map[string]Profile // saved progress by token, for players not online
+	mapDigest string             // the generated layout, to tell whether a save fits it
+	nextID    uint32
 }
 
 // New starts an empty game on map m.
 func New(m *world.DevMap) *State {
+	digest := m.World.Digest()
 	m.World.MarkBaseline() // the map as generated; only later changes are saved
 	return &State{
 		Map:        m,
+		mapDigest:  hex.EncodeToString(digest[:]),
 		MaxPlayers: 8,
 		players:    make(map[uint32]*Player),
 		dirty:      make(map[uint32]bool),
