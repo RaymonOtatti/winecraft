@@ -1,0 +1,127 @@
+{
+  "modifiedBlocks": [
+    {
+      "x": -21,
+      "y": 10,
+      "z": 4,
+      "blockId": 0
+    },
+    {
+      "x": -21,
+      "y": 9,
+      "z": 4,
+      "blockId": 0
+    },
+    {
+      "x": -22,
+      "y": 10,
+      "z": 4,
+      "blockId": 0
+    },
+    {
+      "x": -23,
+      "y": 9,
+      "z": 3,
+      "blockId": 0
+    },
+    {
+      "x": -23,
+      "y": 10,
+      "z": 4,
+      "blockId": 0
+    },
+    {
+      "x": -20,
+      "y": 10,
+      "z": 4,
+      "blockId": 0
+    },
+    {
+      "x": -29,
+      "y": 17,
+      "z": 20,
+      "blockId": 0
+    },
+    {
+      "x": -29,
+      "y": 17,
+      "z": 19,
+      "blockId": 0
+    }
+  ],
+  "playerPosition": {
+    "x": -28.67759234632319,
+    "y": 18.115688000000002,
+    "z": 19.66224565350809
+  },
+  "inventory": {
+    "uva_malbec_zuccardi": {
+      "name": "Racimo Malbec Altamira (Zuccardi)",
+      "bodega": "Zuccardi",
+      "count": 0,
+      "icon": "🍇"
+    },
+    "uva_lacraie": {
+      "name": "Racimo La Craie (PerSe)",
+      "bodega": "PerSe",
+      "count": 0,
+      "icon": "🍇"
+    },
+    "uva_estocada": {
+      "name": "Racimo Biodinámico (La Estocada)",
+      "bodega": "La Estocada",
+      "count": 0,
+      "icon": "🍇"
+    },
+    "uva_san_pablo": {
+      "name": "Racimo Cabernet Franc (Cru de Montaña)",
+      "bodega": "Cru de Montaña",
+      "count": 10,
+      "icon": "🍇"
+    },
+    "mosto_altamira": {
+      "name": "Mosto Malbec Piedra Infinita",
+      "count": 0,
+      "icon": "🧃"
+    },
+    "mosto_lacraie": {
+      "name": "Mosto Calcáreo La Craie",
+      "count": 0,
+      "icon": "🧃"
+    },
+    "mosto_estocada": {
+      "name": "Mosto Biodinámico Camino de los Europeos",
+      "count": 0,
+      "icon": "🧃"
+    },
+    "mosto_sanpablo": {
+      "name": "Mosto de Altura San Pablo",
+      "count": 0,
+      "icon": "🧃"
+    },
+    "vino_piedra_infinita": {
+      "name": "Zuccardi Finca Piedra Infinita 2026",
+      "bodega": "Zuccardi",
+      "count": 0,
+      "icon": "🍷"
+    },
+    "vino_per_se_lacraie": {
+      "name": "PerSe La Craie 2026",
+      "bodega": "PerSe",
+      "count": 0,
+      "icon": "🍷"
+    },
+    "vino_camino_europeos": {
+      "name": "Sitio La Estocada \"Camino de los Europeos\" 2026",
+      "bodega": "La Estocada",
+      "count": 0,
+      "icon": "🍷"
+    },
+    "vino_cru_san_pablo": {
+      "name": "Cru de Montaña \"Cru de San Pablo\" 2026",
+      "bodega": "Cru de Montaña",
+      "count": 0,
+      "icon": "🍷"
+    }
+  }
+}

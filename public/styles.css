@@ -1,0 +1,507 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #111;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Punto de mira (Crosshair) estilo Minecraft */
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+#crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+#crosshair::before {
+    top: 7px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+}
+
+#crosshair::after {
+    top: 0;
+    left: 7px;
+    width: 2px;
+    height: 16px;
+}
+
+/* Pantalla de bloqueo e instrucciones iniciales */
+#blocker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(30, 8, 20, 0.85) 0%, rgba(10, 4, 10, 0.96) 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+#instructions {
+    background: rgba(20, 15, 20, 0.95);
+    border: 3px solid #d4af37;
+    border-radius: 14px;
+    padding: 35px 45px;
+    text-align: center;
+    color: #f7f3e8;
+    max-width: 640px;
+    cursor: pointer;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(212, 175, 55, 0.2);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+#instructions:hover {
+    transform: scale(1.02);
+    border-color: #ffde6b;
+}
+
+.title-winecraft {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: linear-gradient(45deg, #f1c40f, #e74c3c, #9b59b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.subtitle-winecraft {
+    font-size: 16px;
+    color: #e0d0b8;
+    margin-bottom: 24px;
+    font-style: italic;
+}
+
+.instructions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    text-align: left;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.instructions-grid div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.click-prompt {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffd700;
+    animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.98); }
+}
+
+/* Indicador superior de Región / Terruño */
+#region-badge {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(18, 12, 18, 0.85);
+    backdrop-filter: blur(6px);
+    border-left: 5px solid #9c2438;
+    padding: 10px 18px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    line-height: 1.4;
+}
+
+/* Resumen superior derecho de Vendimia */
+#harvest-summary {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(18, 12, 18, 0.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    padding: 10px 18px;
+    border-radius: 6px;
+    color: #f5eedb;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+}
+
+/* Botón flotante para abrir el Códice */
+#codex-btn-toggle {
+    position: absolute;
+    bottom: 95px;
+    right: 25px;
+    background: linear-gradient(135deg, #7c1a2d, #420f18);
+    color: #ffd700;
+    border: 2px solid #d4af37;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    z-index: 25;
+    transition: transform 0.15s, background 0.2s;
+}
+
+#codex-btn-toggle:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #992339, #5e1623);
+}
+
+/* Notificación flotante emergente */
+#notification {
+    position: absolute;
+    top: 85px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 10, 15, 0.92);
+    border: 1px solid #ffd700;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 30;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+}
+
+/* Nombre del bloque actual seleccionado */
+#current-block-name {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    letter-spacing: 1px;
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Barra inferior Hotbar estilo Minecraft */
+#hotbar-container {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    background: rgba(25, 20, 25, 0.85);
+    padding: 5px;
+    border-radius: 8px;
+    border: 2px solid #5a4b3d;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+    z-index: 20;
+    gap: 4px;
+}
+
+.hotbar-slot {
+    width: 52px;
+    height: 52px;
+    background: rgba(45, 38, 45, 0.9);
+    border: 2px solid #332a33;
+    border-radius: 5px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.hotbar-slot:hover {
+    border-color: #8c7355;
+}
+
+.hotbar-slot.active {
+    border-color: #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    transform: translateY(-3px);
+}
+
+.slot-number {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 11px;
+    color: #aaa;
+    font-weight: bold;
+}
+
+.slot-icon {
+    font-size: 22px;
+}
+
+/* Modales (Códice del Sommelier y Ficha de Degustación) */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+}
+
+/* Códice */
+.codex-container {
+    background: #1c1517;
+    border: 3px solid #d4af37;
+    width: 820px;
+    max-width: 92vw;
+    max-height: 85vh;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.9);
+    color: #f0eae1;
+    overflow: hidden;
+}
+
+.codex-header {
+    background: linear-gradient(90deg, #440c17, #1f060b);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #d4af37;
+}
+
+.codex-header h1 {
+    font-size: 24px;
+    color: #ffd700;
+    margin: 0;
+}
+
+.codex-close-btn {
+    background: transparent;
+    border: none;
+    color: #ffd700;
+    font-size: 26px;
+    cursor: pointer;
+}
+
+.codex-tabs {
+    display: flex;
+    background: #120d0f;
+    border-bottom: 1px solid #3d2d1e;
+}
+
+.codex-tab-btn {
+    flex: 1;
+    padding: 12px 10px;
+    background: transparent;
+    border: none;
+    color: #b8a99a;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.codex-tab-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.codex-tab-btn.active {
+    color: #ffd700;
+    border-bottom-color: #ffd700;
+    background: rgba(212, 175, 55, 0.1);
+}
+
+.codex-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+    line-height: 1.6;
+}
+
+.codex-section h2 {
+    color: #ffd700;
+    margin-bottom: 12px;
+    font-size: 20px;
+}
+
+.codex-lead {
+    font-size: 15px;
+    margin-bottom: 18px;
+    color: #dedede;
+}
+
+.codex-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 4px solid #ffd700;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+}
+
+.codex-card h3 {
+    color: #f7ca5e;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.codex-card ul, .codex-card ol {
+    margin-left: 20px;
+    margin-top: 8px;
+}
+
+.codex-card li {
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+/* Tabla comparativa */
+.codex-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13.5px;
+}
+
+.codex-table th, .codex-table td {
+    padding: 10px 14px;
+    border: 1px solid #3a2c20;
+    text-align: left;
+}
+
+.codex-table th {
+    background: #361019;
+    color: #ffd700;
+}
+
+.codex-table tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Ficha de cata */
+.tasting-card {
+    background: #201418;
+    border: 3px solid #d4af37;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 620px;
+    width: 90vw;
+    color: #f4ede4;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+}
+
+.tasting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #521c27;
+    padding-bottom: 12px;
+    margin-bottom: 15px;
+}
+
+.tasting-header h2 {
+    font-size: 20px;
+    color: #ffd700;
+}
+
+.tasting-score {
+    background: #7a1529;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 13px;
+    border: 1px solid #d4af37;
+}
+
+.tasting-origin, .tasting-terroir {
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: #d1c5b8;
+}
+
+.tasting-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 18px 0;
+}
+
+.tasting-box {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid #4a3424;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.tasting-box strong {
+    display: block;
+    color: #ffd700;
+    margin-bottom: 4px;
+}
+
+.tasting-close-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #7c1a2d, #52121e);
+    color: #ffd700;
+    border: 1px solid #d4af37;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.tasting-close-btn:hover {
+    background: linear-gradient(135deg, #992339, #6d1928);
+}

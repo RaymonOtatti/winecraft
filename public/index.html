@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WineCraft: Mendoza — Valle de Uco</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍷</text></svg>">
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="crosshair"></div>
+
+    <!-- Indicador superior de Bodega y Terruño -->
+    <div id="region-badge">
+        🏛️ <b>Zuccardi Valle de Uco</b> — Paraje Altamira (1.100 msnm)<br>
+        <small>Director: Sebastián Zuccardi | Finca Piedra Infinita</small>
+    </div>
+
+    <!-- Resumen de Vendimia -->
+    <div id="harvest-summary">
+        🍇 Racimos de Uco: <b>0</b> | 🍷 Botellas Icono: <b>0</b>
+    </div>
+
+    <!-- Botón flotante para abrir el Códice -->
+    <button id="codex-btn-toggle" onclick="window.WineCodex.toggle()">📖 Códice de Bodegas (E / C)</button>
+
+    <!-- Notificación flotante emergente -->
+    <div id="notification"></div>
+
+    <!-- Nombre del bloque seleccionado -->
+    <div id="current-block-name">Terruño Altamira</div>
+
+    <!-- Hotbar de 9 bloques de Mendoza -->
+    <div id="hotbar-container">
+        <div class="hotbar-slot active" data-slot="1" title="Terruño Altamira"><span class="slot-number">1</span><span class="slot-icon">🪨</span></div>
+        <div class="hotbar-slot" data-slot="2" title="Arena Gualtallary"><span class="slot-number">2</span><span class="slot-icon">🏖️</span></div>
+        <div class="hotbar-slot" data-slot="3" title="Caliza La Craie"><span class="slot-number">3</span><span class="slot-icon">⚪</span></div>
+        <div class="hotbar-slot" data-slot="4" title="Pasto del Valle de Uco"><span class="slot-number">4</span><span class="slot-icon">🌾</span></div>
+        <div class="hotbar-slot" data-slot="5" title="Vid Malbec Altamira (Zuccardi)"><span class="slot-number">5</span><span class="slot-icon">🍇</span></div>
+        <div class="hotbar-slot" data-slot="6" title="Vid La Craie (PerSe)"><span class="slot-number">6</span><span class="slot-icon">🫐</span></div>
+        <div class="hotbar-slot" data-slot="7" title="Vid Biodinámica (La Estocada)"><span class="slot-number">7</span><span class="slot-icon">🌱</span></div>
+        <div class="hotbar-slot" data-slot="8" title="Vid Cru de San Pablo"><span class="slot-number">8</span><span class="slot-icon">🍇</span></div>
+        <div class="hotbar-slot" data-slot="9" title="Vasija de Hormigón"><span class="slot-number">9</span><span class="slot-icon">🏺</span></div>
+    </div>
+
+    <!-- Pantalla inicial de bloqueo e instrucciones -->
+    <div id="blocker">
+        <div id="instructions">
+            <div class="title-winecraft">WINECRAFT: VALLE DE UCO</div>
+            <div class="subtitle-winecraft">Mendoza: Zuccardi, PerSe, Sitio La Estocada & Cru de Montaña</div>
+
+            <div class="instructions-grid">
+                <div><span>🏃</span> <b>W, A, S, D o Flechas:</b> Moverse (con auto-escalón)</div>
+                <div><span>🚀</span> <b>Espacio:</b> Saltar</div>
+                <div><span>⚡</span> <b>Shift:</b> Correr / Sprint</div>
+                <div><span>⛏️</span> <b>Clic Izquierdo:</b> Cosechar Vides / Minar</div>
+                <div><span>🧱</span> <b>Clic Derecho:</b> Hormigón / Barrica / Prensa / Atril</div>
+                <div><span>🔢</span> <b>1 - 9 / Rueda:</b> Seleccionar Bloque</div>
+                <div><span>✨</span> <b>Tecla T:</b> Viaje rápido entre las 4 Bodegas</div>
+                <div><span>📖</span> <b>Tecla E o C:</b> Códice de las Bodegas y Dueños</div>
+                <div><span>🎵</span> <b>Tecla M:</b> Música de Viñedo</div>
+                <div><span>📍</span> <b>Tecla R:</b> Reaparecer en Zuccardi</div>
+            </div>
+
+            <div class="click-prompt">👉 HAZ CLIC AQUÍ PARA EXPLORAR EL VALLE DE UCO 👈</div>
+        </div>
+    </div>
+
+    <!-- Modal del Códice de Bodegas -->
+    <div id="codex-modal" class="modal-overlay">
+        <div class="codex-container">
+            <div class="codex-header">
+                <h1>📚 Guía de Bodegas de Culto — Valle de Uco, Mendoza</h1>
+                <button class="codex-close-btn" onclick="window.WineCodex.close()">&times;</button>
+            </div>
+            <div class="codex-tabs">
+                <button class="codex-tab-btn active" data-tab="zuccardi" onclick="window.WineCodex.setTab('zuccardi')">🏛️ Zuccardi</button>
+                <button class="codex-tab-btn" data-tab="perse" onclick="window.WineCodex.setTab('perse')">🕊️ PerSe</button>
+                <button class="codex-tab-btn" data-tab="estocada" onclick="window.WineCodex.setTab('estocada')">🌱 Sitio La Estocada</button>
+                <button class="codex-tab-btn" data-tab="cru" onclick="window.WineCodex.setTab('cru')">❄️ Cru de Montaña</button>
+                <button class="codex-tab-btn" data-tab="controls" onclick="window.WineCodex.setTab('controls')">🎮 Controles & Crafteo</button>
+            </div>
+            <div id="codex-body" class="codex-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Ficha de Degustación Oficial -->
+    <div id="tasting-modal" class="modal-overlay">
+        <div id="tasting-content"></div>
+    </div>
+
+    <script src="lib/three.min.js"></script>
+    <script src="lib/PointerLockControls.js"></script>
+    <script src="js/textures.js"></script>
+    <script src="js/blocks.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/winemaking.js"></script>
+    <script src="js/codex.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
