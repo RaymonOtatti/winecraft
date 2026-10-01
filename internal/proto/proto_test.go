@@ -37,6 +37,7 @@ func samples() []Msg {
 		&Ping{Nonce: 99},
 		&Error{Code: ErrBadJoinCode, Text: "código incorrecto"},
 		&Chat{Text: "¡Has cosechado uvas! Ahora construye un banco."},
+		&Map{Bounds: world.Rect{X: -10, Y: -5, W: 20, H: 10}, Bits: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a}},
 	}
 }
 

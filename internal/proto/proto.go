@@ -21,7 +21,8 @@ import (
 // 2: inventory entries are items, not tiles; Interact added.
 // 3: Hotbar added.
 // 4: Crafting panel (K) added.
-const Version uint16 = 4
+// 5: Discoverable map (fog of war) added.
+const Version uint16 = 5
 
 // HotbarSlots is how many items the hotbar holds (keys 1-4).
 const HotbarSlots = 4
@@ -56,6 +57,7 @@ const (
 	TypeHotbar                      // both ways: the item in each hotbar slot
 	TypeCraft                       // client → server: craft a recipe by id
 	TypeChat                        // server → client: mentor chat message
+	TypeMap                         // server → client: discovered-tile fog of war
 	numTypes
 )
 
@@ -64,7 +66,7 @@ var names = map[Type]string{
 	TypePlayerState: "PlayerState", TypePlayerLeft: "PlayerLeft", TypeEdit: "Edit",
 	TypeTileUpdate: "TileUpdate", TypeInventory: "Inventory", TypePing: "Ping", TypeError: "Error",
 	TypeInteract: "Interact", TypeHotbar: "Hotbar", TypeCraft: "Craft",
-	TypeChat: "Chat",
+	TypeChat: "Chat", TypeMap: "Map",
 }
 
 func (t Type) String() string {
@@ -158,6 +160,12 @@ type Craft struct{ Recipe uint8 }
 // Chat carries a mentor message to the client.
 type Chat struct{ Text string }
 
+// Map sends the player's discovered-tile fog of war from the server.
+type Map struct {
+	Bounds world.Rect
+	Bits   []byte
+}
+
 type Error struct {
 	Code uint8
 	Text string
@@ -179,6 +187,7 @@ func (*Hotbar) Type() Type      { return TypeHotbar }
 func (*Craft) Type() Type       { return TypeCraft }
 
 func (*Chat) Type() Type { return TypeChat }
+func (*Map) Type() Type  { return TypeMap }
 
 // Encode serializes m. It fails if a field exceeds its limit.
 func Encode(m Msg) ([]byte, error) {
@@ -234,6 +243,8 @@ func Decode(b []byte) (Msg, error) {
 		m = new(Craft)
 	case TypeChat:
 		m = new(Chat)
+	case TypeMap:
+		m = new(Map)
 	default:
 		return nil, fmt.Errorf("unknown message type %d", b[0])
 	}
@@ -408,6 +419,15 @@ func (m *Craft) decode(r *reader) { m.Recipe = r.u8() }
 func (m *Chat) encode(w *writer) { w.strMax(m.Text, MaxText) }
 func (m *Chat) decode(r *reader) { m.Text = r.str(MaxText) }
 
+func (m *Map) encode(w *writer) {
+	w.rect(m.Bounds)
+	w.blob(m.Bits)
+}
+func (m *Map) decode(r *reader) {
+	m.Bounds = r.rect()
+	m.Bits = r.blob()
+}
+
 func (m *Ping) encode(w *writer) { w.u32(m.Nonce) }
 func (m *Ping) decode(r *reader) { m.Nonce = r.u32() }
 
@@ -454,6 +474,15 @@ func (w *writer) strMax(s string, max int) {
 	}
 	w.u8(uint8(len(s)))
 	w.buf = append(w.buf, s...)
+}
+
+func (w *writer) blob(b []byte) {
+	if len(b) > MaxMessage {
+		w.fail(fmt.Errorf("blob of %d bytes exceeds MaxMessage", len(b)))
+		return
+	}
+	w.u16(uint16(len(b)))
+	w.buf = append(w.buf, b...)
 }
 
 // reader consumes little-endian fields; the first failure sticks and every
@@ -526,6 +555,21 @@ func (r *reader) str(max int) string {
 		return ""
 	}
 	return string(b)
+}
+
+func (r *reader) blob() []byte {
+	n := int(r.u16())
+	if n > MaxMessage {
+		r.fail(fmt.Errorf("blob of %d bytes exceeds MaxMessage", n))
+		return nil
+	}
+	b := r.take(n)
+	if b == nil {
+		return nil
+	}
+	out := make([]byte, n)
+	copy(out, b)
+	return out
 }
 
 func (r *reader) dir() world.Dir {
