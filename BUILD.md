@@ -22,7 +22,7 @@ Nothing gets pushed to any remote until Franco says so.
 ## B1 — World core (`internal/world`, TDD)
 - [x] **B1.1** Tile registry (id, name, walkable, layer, breakable, placeable, drop). Chunk = 32×32 with layers `ground`/`object`, stored as `[]uint16`. World chunks keyed by an integer pair, never strings. Get/Set across chunk borders, negative coordinates included.
   *Verify:* `go test ./internal/world/...` covers borders and negatives.
-- [ ] **B1.2** Movement rules: `CanStep(from, dir)` blocks on solid objects and water; **ledges are one-way** (hop down, not up, Pokémon style).
+- [x] **B1.2** Movement rules: `CanStep(from, dir)` blocks on solid objects and water; **ledges are one-way** (hop down, not up, Pokémon style).
   *Verify:* table tests per direction and ledge case.
 - [ ] **B1.3** Deterministic DEV MAP, about 96×96: vine rows, a dirt road, a stream with a bridge, a small plaza, a fenced **sandbox build zone**, and a ledge band. Same seed → same bytes.
   *Verify:* determinism test (hash); the spawn is walkable; the sandbox can be reached from spawn (BFS test).
@@ -80,3 +80,4 @@ Nothing gets pushed to any remote until Franco says so.
 - 2026-10-01 · B0.1 · branch `go-rebuild`, `go.mod` (module github.com/RaymonOtatti/winecraft, go 1.26.4), `.gitignore` extended, root `doc.go` · `go vet ./...` exit 0 · see commit
 - 2026-10-01 · B0.2 · `Makefile` with test (-race), vet, fuzz, wasm, size, run, client, snap, share, clean · `make test` exit 0 · see commit
 - 2026-10-01 · B1.1 · `internal/world`: 17-tile registry (vines not breakable), 32×32 chunks as flat `[2][1024]uint16`, `ChunkCoord` integer keys, shift/mask `ChunkOf` · `go test -race ./internal/world/...` 6/6 pass (borders, negatives, layers, no alloc on read) · see commit
+- 2026-10-01 · B1.2 · `world.CanStep` (walls, water, vines, void block; `LedgeSouth` hop lands 2 tiles south, no climbing, no walking along, landing must be free) + `Dir` · `go test -race ./internal/world/...` 10/10 pass · see commit
