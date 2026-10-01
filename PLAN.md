@@ -65,7 +65,14 @@ Smaller issues: `shadowMap.enabled` with no shadow casters (pure cost); `updateR
 
 ### 1.4 Data problems ("real data only")
 
-The prototype shows fixed critic scores ("100 Puntos") on a **2026 vintage**. Uco harvests run Feb–Apr, and top Malbecs then age for a year or more, so no 2026 bottle of these wines has been rated. It also labels invented text as a **"Ficha de Degustación Oficial"** and attributes it to named real people. Several winery, owner and restaurant claims still need confirming; the claim-by-claim audit is in **Appendix B**.
+The four bodegas are **real**, and most headline facts check out. The problems are in the details (full audit in **Appendix B**):
+
+- **Scores on a vintage that hasn't been rated.** "100 Puntos" is shown on a **2026** bottle. The real 100s belong to specific vintages: Finca Piedra Infinita 2016, Gravascal 2018, Supercal 2019 (Wine Advocate) and PerSe La Craie 2018. A 2026 Uco wine hasn't even finished aging.
+- **Invented tasting notes labeled "Oficial".** The "Ficha de Degustación Oficial" text is made up and attributed to named real winemakers.
+- **"Gualtallary" is presented as an appellation, but it isn't an official IG** (a third-party trademark blocks it). It's a real place; the game can name it, but not label it an IG.
+- **Wrong roles and names.** Manolo Pelegrina is Cru de Montaña's vineyard manager, not a co-owner. PerSe's "Uní" is really "Uni del Bonesant".
+- **A sensitive location.** PerSe's vineyard is leased from the Monasterio del Cristo Orante, which the Archdiocese of Mendoza closed in January 2019 after sexual-abuse complaints against two monks. The game must not portray it as an active monastery or as scenery.
+- **Invented coordinates.** All four bodegas are placed on a made-up grid.
 
 ### 1.5 What survives the rebuild
 
@@ -130,7 +137,26 @@ Species occurrences (GBIF, CC0/CC-BY)  ─┘                                   
 
 ### 4.3 Zones
 
-The valley's official **geographical indications (IGs)** and named areas become the game's regions, each with its own soil tiles, music, species list, NPC quests and medal. The official IG list comes from the fact-check (Appendix B), not from the prototype.
+The valley's official **geographical indications (IGs)** become the game's regions, each with its own soil tiles, music, species list, NPC quests and medal. INV's list for Valle de Uco:
+
+| IG | Department | Resolution |
+|---|---|---|
+| Valle de Uco (regional) | San Carlos, Tunuyán, Tupungato | C.37/2002 |
+| Tupungato – Valle de Tupungato | Tupungato | C.32/2002, C.20/2006 |
+| Tunuyán | Tunuyán | C.32/2002 |
+| San Carlos | San Carlos | C.32/2002 |
+| Vista Flores | Tunuyán | C.11/2012 |
+| Paraje Altamira | San Carlos | C.44/2013 |
+| La Consulta | San Carlos | C.19/2014 |
+| Los Chacayes | Tunuyán | RESOL-2017-249 |
+| Pampa El Cepillo | San Carlos | RESOL-2019-1 |
+| San Pablo | Tunuyán | RESOL-2019-10 |
+| Cordón El Cepillo | San Carlos | Res. 7/2022 |
+| El Peral | Tupungato | Res. 1/2022 |
+
+**Gualtallary is not an IG.** A third-party trademark blocks the name, so it appears as a named area inside Tupungato, never labeled "IG".
+
+IG boundaries are published only as vertex lists in the official resolutions (e.g., Cordón El Cepillo has 28 lat/lon vertices). No shapefile exists, so Phase 0 digitizes them from the resolutions, with the resolution as the source record.
 
 ### 4.4 Size and streaming
 
@@ -161,7 +187,28 @@ Every stage is a **station** (an object you craft and place). It has a UI panel,
 
 ### 6.1 Stages (red wine; whites and rosé reuse most of them in a different order)
 
-⟨filled from research: harvest timing/°Brix, sorting, destemming/whole cluster, SO₂, cold soak, alcoholic fermentation, pump-over/punch-down, pressing, malolactic, racking, aging vessels/durations, fining/filtration, bottling, bottle aging⟩
+Every number below is a **registry record** with its source (ids refer to Appendix C). The winery figures are the published tech-sheet data of real Uco wines, so a player who copies a real wine's process can find that in the cellar log.
+
+| # | Stage | Station | What you decide | Real reference |
+|---|---|---|---|---|
+| 1 | Ripeness sampling | refractometer (hand tool) | which parcel, which day; read °Brix | Gualtallary (Catena, Adrianna): harvest 15 Mar–26 Apr, °Brix never above 24.5 [W1]. Altamira (Zuccardi): Malbec picked 31 Mar–13 Apr in 2012, late Mar–29 Apr in 2014 [Z1] |
+| 2 | Hand harvest | harvest bins | when to pick; bunch selection in the row | Zuccardi: hand harvest with bunch selection [Z2] |
+| 3 | Sorting | sorting table | how strict (% rejected) | Double selection, then gravity filling (Altos Las Hormigas) [H1] |
+| 4 | Destemming / whole cluster | destemmer | 0–100% whole cluster | Zuccardi Concreto 100% whole cluster [Z3]; Supercal 2019 destemmed and crushed [Z4]; Altos Las Hormigas 30% stems [H1]; Estocada Cabernet Franc 100% stems [E1] |
+| 5 | SO₂ at crush | dosing | mg/L (or none) | AWRI small-lot method: 50 mg/L at crush [A1]. OIV maximum total SO₂ for reds: 150 mg/L when sugar ≤ 4 g/L [O1]. Some PerSe wines: no sulfites until bottling [P1] |
+| 6 | Cold soak | tank with cooling | days at 5–10 °C, or skip | AWRI: 5–10 °C, from 5–10 hours up to 10 days [A2] |
+| 7 | Alcoholic fermentation | concrete / steel / open vat | native or inoculated yeast; temperature | Red range 20–30 °C [U1]. Altos Las Hormigas: native yeast, 26 °C, 25 days [H1]. Zuccardi and PerSe: native yeast [Z2][P1] |
+| 8 | Cap management | in the vat | pump-over or punch-down, times per day, days on skins | Altos Las Hormigas: no pumping, punch-down twice a day [H1]. La Craie 2013: two punch-downs a day, 35 days on skins [P2]; current La Craie: light foot treading, 45 days [P3]. AWRI: plunge 3–4 times a day [A1] |
+| 9 | Pressing | basket or pneumatic press | when; free-run vs. press fraction | AWRI: press when residual sugar < 2 g/L [A1] |
+| 10 | Malolactic | any vessel | temperature; when it's done | 18–22 °C, pH 3.2–3.5, free SO₂ < 5 mg/L; done at malic < 30–50 mg/L [U2] |
+| 11 | Racking | tank | settle, then rack off the solids | AWRI: settle 48 h at 4 °C, then rack [A1] |
+| 12 | Aging (élevage) | concrete, used 500–600 L oak, 3,500 L foudre, barrique | vessel mix and months | Finca Piedra Infinita 2020/2023: 100% concrete; 2016: part in used 500 L French oak [Z2][Z5]. Supercal 2019: 50% used 500 L oak [Z4]. Altos Las Hormigas: 20 months, half untoasted 3,500 L foudres, half concrete [H1]. La Craie: 12 months neutral French oak [P3]. Cru de San Pablo: 18 months 600 L oak, then 12 months concrete [C1] |
+| 13 | Blending | lab bench | lots and % | Your choice; the cellar log records it |
+| 14 | Fining / filtration | filter | none, coarse or gentle | La Craie unfiltered [P3]; Altos Las Hormigas coarse [H1]; Cru de San Pablo gentle [C1] |
+| 15 | Bottling | bottling line | final SO₂ adjustment, closure, label | OIV limits apply at the lab check [O1] |
+| 16 | Bottle aging | cellar | months before release | Altos Las Hormigas 6 months [H1]; Cru de San Pablo 24 months [C1] |
+
+**Still needs a source (Phase 5 blocker):** the sugar-to-alcohol conversion factor and its fermentation curve; a typical °Baumé for Uco Malbec (the fact-check found none beyond the 24.5 °Brix ceiling); INV's sugar-by-variety data (not found in the harvest yearbook). These must be sourced before `sim/` uses them.
 
 ### 6.2 Vineyard year (the calendar)
 
@@ -408,8 +455,95 @@ Zone after zone: content, NPCs, interiors, medal, species. Whites and rosé. Rea
 
 ## Appendix B — Audit of the prototype's claims
 
-⟨filled from fact-check⟩
+Checked 2026-10-01 against the sources listed (source ids in Appendix C).
+
+| Claim in the prototype | Verdict | What's actually true |
+|---|---|---|
+| Zuccardi Valle de Uco: Paraje Altamira, ~1,100 m, Sebastián Zuccardi, opened 2016 | ✅ True | Inaugurated March 2016 (built from 2013). Sebastián Zuccardi is Winemaking Director [Z2][Z6] |
+| Zuccardi #1 World's Best Vineyards | ✅ True | #1 in 2019 and 2020 [B1][B2]. A third #1 in 2021 and the Hall of Fame are reported but unconfirmed |
+| Zuccardi ferments in epoxy-free concrete | ✅ True | "Hormigón sin epoxi" on the tech sheets [Z7] |
+| Piedra Infinita, Gravascal, Supercal: 100 pts Wine Advocate | ◐ Partly | Wine Advocate 100s: Finca Piedra Infinita 2016, Gravascal 2018, Supercal 2019 (Luis Gutiérrez); Gravascal 2021 (Matthew Luczy). Other 100s came from other critics (Tapia, Atkin, Dunnuck) [Z8] |
+| "More than 1,000 trucks of stones" | ✅ True | Stated on the official tech sheet [Z5] |
+| PerSe: 2012, Edy Del Pópolo & David Bonomi, Gualtallary ~1,450–1,500 m | ✅ True | Santiago del Pópolo is also on the team [P1][P4] |
+| PerSe next to the Monasterio del Cristo Orante | ⚠️ True, sensitive | Vines are on monastery land (leased). The monastery was **closed in January 2019** by the Archdiocese after abuse complaints [P3][N1]. Never show it as active |
+| La Craie 100 pts | ◐ Partly | 2018 got 100 (Gutiérrez); 2015 and 2016 got 98. 2019 at 100 is unconfirmed [P5] |
+| PerSe wines Iubileus, Inseparable, Uní | ◐ Fix name | "Uni del Bonesant" (312 vines, 0.06 ha). 2018: Uní 99, Iubileus 98, Inseparable 94 [P4][P5] |
+| Sitio La Estocada, Matías Michelini & family, 4 ha biodynamic | ✅ True | 4 ha, 9 vineyard parcels, 2.111 ha of vines, biodynamic. Address: Ruta 89 – Camino de los Europeos s/n, Gualtallary [E2][E3] |
+| "Camino de los Europeos" wine line | ✅ True | "Fase 1": Rosado de Pinot Noir, Sauvignon Blanc, Cabernet Franc; Wine Club only. The Cabernet Franc 2022 is from San Pablo, not the estate [E1][E4] |
+| Restaurant Cal, MICHELIN | ✅ True from 2026 | 1 Star + Green Star + Young Chef Award (Enzo González Petra) in the **2026** guide; absent from 2024/2025 [M1][M2] |
+| Cru de Montaña by sommelier Rodrigo Calderón | ✅ True | He leads the project [C2] |
+| …and Manolo Pelegrina | ◐ Partly | Vineyard manager, not co-owner. Matías Michelini is the collaborating enologist [C1] |
+| Cru de Montaña at San Pablo, 1,400–1,470 m | ◐ Partly | San Pablo vineyard at 1,470 m [C1] |
+| Wines Cru de San Pablo, Cru de Gualtallary, Días Perfectos | ✅ True | Cru de San Pablo is 85% Cabernet Franc / 15% Malbec. Cru de Gualtallary is from Gualtallary. Días Perfectos includes a San Pablo Malbec and an El Peral Semillón [C1][C3] |
+| "Gualtallary" as an appellation | ❌ False | Not an IG; a trademark blocks the name [G1] |
+| Tasting notes and "Ficha Oficial" on 2026 vintages | ❌ Invented | Replace with tech-sheet data only, cited |
+| Bodega coordinates | ❌ Invented | Zuccardi winery: -33.7730, -69.1569 (OSM way 676944463, DEM 1,079 m). PerSe, Cru de Montaña and Sitio La Estocada have **no OSM feature**, so Phase 0 must source coordinates from the wineries or their official addresses |
+
+**Unconfirmed, so not usable until sourced:** Zuccardi's 2021 #1 and Hall of Fame; La Craie 2019 at 100; La Estocada's altitude (1,350 m) and founding year; PerSe and Cru de Montaña coordinates; which of two OSM "Cristo Orante" features (6 km apart) is right; Cru de Gualtallary at 1,400 m; "Giorgio Bendetti" as a partner; the department of Diam's (DiamAndes).
 
 ## Appendix C — Data sources
 
-⟨filled from research⟩
+### C.1 World and geography
+
+| Source | Format | License / credit | Use |
+|---|---|---|---|
+| Copernicus GLO-30 DEM — https://registry.opendata.aws/copernicus-dem/ | Cloud-optimized GeoTIFF | Free; credit "© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA" | Terrain and height bands (primary) |
+| SRTM GL1 v003 — https://www.earthdata.nasa.gov/data/catalog/lpcloud-srtmgl1-003 | GeoTIFF/HGT | No restrictions; cite DOI 10.5067/MEASURES/SRTM/SRTMGL1.003 | Cross-check |
+| ALOS AW3D30 — https://www.eorc.jaxa.jp/ALOS/en/dataset/aw3d30/aw3d30_e.htm | GeoTIFF | Free incl. commercial; credit "©JAXA" | Cross-check |
+| IGN MDE-Ar v2.1 — https://www.ign.gob.ar/NuestrasActividades/Geodesia/ModeloDigitalElevaciones/faq | .img | Free download; license text not found | Argentina-only, ~2 m vertical accuracy (use only after the license is confirmed) |
+| OpenStreetMap via Overpass — https://overpass-api.de · https://www.openstreetmap.org/copyright | JSON/XML/PBF | ODbL: "© OpenStreetMap contributors"; derived DB must be ODbL | Roads, towns, buildings, vineyards (1,527 `landuse=vineyard` areas in the three departments), wineries (43 in the core box). Rivers and canals still to be queried |
+| IG resolutions (Boletín Oficial), e.g. https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-7-2022-377091 | Text vertex lists | Public law | IG boundaries (digitize) |
+| INV IG list — https://www.argentina.gob.ar/sites/default/files/i.g._y_d.o.c._de_la_republica_argentina_1.pdf | PDF | Public | Official IG names and resolutions |
+
+**Bounding boxes:** vineyard zone S -34.10, N -33.13, W -69.43, E -68.91 (the core 98% sits in -34.00…-33.29, -69.33…-68.99). With the Cordón del Plata and Volcán Tupungato: S -34.11, N -32.95, W -69.80, E -68.90. The Tupungato summit is on the Chilean border, so the elevation tiles must include the Chilean side. At 5 m per tile the core zone is about 15,800 × 6,300 tiles.
+
+### C.2 Vineyards, wineries, climate
+
+| Source | Format | License | Use |
+|---|---|---|---|
+| INV vineyard area — https://datos.magyp.gob.ar/dataset/superficie-implantada-con-vinedos-republica-argentina | CSV 2012–2025 | CC BY 4.0 | Hectares by department, locality, variety, planting year, training system → **dex rarity** |
+| INV Malbec report 2025 — https://www.argentina.gob.ar/sites/default/files/2018/10/informe_malbec-2025-inv.pdf | PDF | Not stated | Malbec 2024: San Carlos 5,863 ha, Tunuyán 5,679 ha, Tupungato 5,042 ha |
+| INV harvest yearbook 2024 — https://www.argentina.gob.ar/sites/default/files/2018/10/anuario_cosecha_y_elaboracion_2024.pdf | PDF | Not stated | Grapes received by variety (no sugar data) |
+| INV winery registry — https://www.argentina.gob.ar/inv/vinos/consultas/inscriptos | Web form / PDF | Not stated | Registered bodegas by department |
+| Open-Meteo Historical (ERA5) — https://open-meteo.com/en/license | JSON/CSV API | CC BY 4.0 | Daily temperatures, frost → phenology calendar (~25 km grid) |
+| INTA SIGA — https://inta.gob.ar/unidades/212000/siga | CSV | "Free download", no license text | La Consulta station (finer detail) |
+| DACC Mendoza — http://www.contingencias.mendoza.gov.ar/web1/agrometeorologia/estaciones.html | Web/PDF | Not stated | 28 stations incl. La Consulta, El Peral, Tunuyán; hail and frost reports |
+
+### C.3 Winemaking and fact-check citations
+
+| Id | Source |
+|---|---|
+| Z1 | Zuccardi harvest report 2014 — https://zuccardiwines.com/wp-content/uploads/2024/05/Zuccardi-Valle-de-Uco-Reporte-de-Cosecha-2014.pdf |
+| Z2 | Finca Piedra Infinita 2020 tech sheet — https://zuccardiwines.com/wp-content/uploads/2024/06/FT-ESP-FINCA-PIEDRA-INFINITA-2020.pdf |
+| Z3 | Zuccardi Concreto 2022 tech sheet — https://zuccardiwines.com/wp-content/uploads/2024/06/FT-ESP-CONCRETO-2022.pdf |
+| Z4 | Supercal 2019 tech sheet — https://www.winesellersltd.com/wp-content/uploads/2022/05/Zuccardi_Finca_Piedra_Infinita_Supercal_Malbec_2019.pdf |
+| Z5 | Finca Piedra Infinita 2023 and 2016 tech sheets — https://zuccardiwines.com/wp-content/uploads/2026/03/FT-ESP-FINCA-PIEDRA-INFINITA-2023.pdf · https://zuccardiwines.com/wp-content/uploads/2024/06/FT-ESP-FINCA-PIEDRA-INFINITA-2016.pdf |
+| Z6 | Zuccardi history — http://zuccardiwines.com/en/historia/ |
+| Z7 | Gravascal 2017 tech sheet — https://zuccardiwines.com/wp-content/uploads/2024/06/FT-ESP-ZUCCARDI-GRAVASCAL-2017.pdf |
+| Z8 | Zuccardi 100-point list — https://zuccardiwines.com/wp-content/uploads/2025/09/10-100-POINTS-ingles.pdf |
+| B1, B2 | World's Best Vineyards 2019, 2020 — https://wineindustryadvisor.com/2019/07/11/zuccardi-valle-de-uco-ranks-1-on-2019-list/ · https://wineindustryadvisor.com/2020/07/15/zuccardi-awarded-worlds-best-vineyard-south-america/ |
+| P1 | Wine Anorak on PerSe — https://wineanorak.com/2020/09/01/perse-stunning-wines-from-gualtallary-in-argentina/ |
+| P2 | La Craie 2013 tech sheet — https://persevines.com/wp-content/uploads/2020/12/La-Craie-2013-ingles.pdf |
+| P3 | PerSe La Craie page — https://persevines.com/en/producto/per-se-la-craie/ |
+| P4 | PerSe site — https://persevines.com/en/ |
+| P5 | La Craie 2018 scores — https://thesourcingtable.com/blogs/offers/perse-2018-100-point-releases |
+| N1 | Monastery closure — https://www.infobae.com/sociedad/2019/01/04/cerro-un-monasterio-de-mendoza-por-denuncias-de-abuso-sexual-contra-dos-monjes/ |
+| E1 | Estocada Cabernet Franc 2022 — https://sitiolaestocada.com/los-vinos/cabernet-franc-2022/ |
+| E2, E3 | Sitio La Estocada — https://sitiolaestocada.com/el-lugar/ · https://sitiolaestocada.com/vitivinicultura/viticultura/ |
+| E4 | Estocada wines — https://sitiolaestocada.com/los-vinos/ |
+| M1, M2 | MICHELIN Argentina 2026 — https://www.cnnbrasil.com.br/viagemegastronomia/gastronomia/guia-michelin-argentina-2026-4-restaurantes-conquistam-a-primeira-estrela/ · https://soloporgusto.com/tres-restaurantes-de-mendoza-reciben-su-primera-estrella-roja-michelin/ |
+| C1 | Cru de San Pablo — https://briccowines.com.ar/productos/cru-de-montana-cru-de-san-pablo/ |
+| C2 | Cru de Montaña — https://www.rebellion.com.ar/bodegas/cru-de-montana/ |
+| C3 | Cru de Montaña range — https://briccowines.com.ar/cru-de-montana/ |
+| G1 | Gualtallary IG blocked — https://geografiadelvino.com/2024/03/20/hay-que-hacer-algo-con-gualtallary/ |
+| H1 | Altos Las Hormigas Paraje Altamira 2020 — https://altoslashormigas.com/wp-content/uploads/2025/07/TS_Appellation_Paraje_Altamira_2020_ENG.pdf |
+| W1 | Catena Zapata Malbec Argentino vintage notes — https://argentina.guides.winefolly.com/wineries/bodega-catena-zapata/wines/catena-zapata-malbec-argentino/vintages/VT-PVFTJKNUQ/ |
+| A1 | AWRI small-lot fermentation method — https://www.awri.com.au/wp-content/uploads/small_lot_fermentation_method.pdf |
+| A2 | AWRI cold soak — https://www.awri.com.au/industry_support/winemaking_resources/winemaking-practices/winemaking-treatment-cold-soak/ |
+| O1 | OIV maximum acceptable limits — https://www.oiv.int/standards/international-code-of-oenological-practices/annexes/maximum-acceptable-limits |
+| U1 | Penn State Extension, wine production — https://extension.psu.edu/food-safety-and-quality/grape-and-wine-production/wine-production |
+| U2 | Oregon State Extension, malolactic — https://extension.oregonstate.edu/food/wine-beer/conducting-successful-malolactic-fermentation |
+
+### C.4 Economy
+
+⟨pending: economics research⟩
