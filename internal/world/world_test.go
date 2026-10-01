@@ -18,8 +18,8 @@ func TestRegistryIsConsistent(t *testing.T) {
 		if d.Layer >= NumLayers {
 			t.Fatalf("tile %q has invalid layer %d", d.Name, d.Layer)
 		}
-		if d.Drop != None && int(d.Drop) >= len(defs) {
-			t.Fatalf("tile %q drops unknown tile %d", d.Name, d.Drop)
+		if int(d.Drop) >= NumItems() {
+			t.Fatalf("tile %q drops unknown item %d", d.Name, d.Drop)
 		}
 	}
 	if Def(None).Walkable {

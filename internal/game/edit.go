@@ -53,7 +53,7 @@ func (s *State) Edit(id uint32, x, y int, layer world.Layer, tile world.TileID, 
 		if cur == world.None || !world.Def(cur).Breakable {
 			return Change{}, ErrNotAllowed
 		}
-		gain, _ = world.ItemForTile(world.Def(cur).Drop)
+		gain = world.Def(cur).Drop
 		if layer == world.Ground {
 			if w.At(world.Object, x, y) != world.None {
 				return Change{}, ErrNotAllowed // lift what stands on a floor first

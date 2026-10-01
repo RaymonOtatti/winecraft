@@ -33,7 +33,7 @@ func GenerateDevMap(seed uint64) *DevMap {
 	rng := rand.New(rand.NewPCG(seed, 0x5eed_c0de))
 	m := &DevMap{
 		World:     w,
-		Bounds:    Rect{0, 0, devSize, devSize},
+		Bounds:    Rect{westX0, 0, eastX1 - westX0, devSize},
 		BuildZone: Rect{1, 1, devSize - 2, devSize - 2},
 	}
 
@@ -135,5 +135,20 @@ func GenerateDevMap(seed uint64) *DevMap {
 			w.Set(x, y, Poplar)
 		}
 	}
+	// The zones beside the valley, and the gaps in its poplar border where
+	// the cross road and the meltwater stream pass through.
+	genWest(w, rng)
+	genEast(w, rng)
+	for x := westX0 + 14; x < 8; x++ {
+		w.Set(x, crossRoadY, Road)
+	}
+	for x := 87; x < valleyW; x++ {
+		w.Set(x, crossRoadY, Road)
+	}
+	for _, p := range []Point{{0, crossRoadY}, {valleyW - 1, crossRoadY}, {0, 70}, {0, 71}} {
+		w.Clear(Object, p.X, p.Y)
+	}
+	w.Set(0, 70, Water)
+	w.Set(0, 71, Water)
 	return m
 }

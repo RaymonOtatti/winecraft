@@ -29,9 +29,9 @@ func TestBuildingCostsMaterialsAndBreakingGivesThemBack(t *testing.T) {
 	if _, err := s.Edit(p.ID, 4, 5, world.Object, world.None, t0); err != nil || p.Inv[world.ItemFence] != 1 {
 		t.Fatalf("breaking it gives it back: err %v, have %d", err, p.Inv[world.ItemFence])
 	}
-	stone := p.Inv[world.ItemStone]
-	if _, err := s.Edit(p.ID, 5, 4, world.Object, world.None, t0); err != nil || p.Inv[world.ItemStone] != stone+1 {
-		t.Fatalf("a rock breaks into one stone: err %v, %d → %d", err, stone, p.Inv[world.ItemStone])
+	cantos := p.Inv[world.ItemCanto]
+	if _, err := s.Edit(p.ID, 5, 4, world.Object, world.None, t0); err != nil || p.Inv[world.ItemCanto] != cantos+1 {
+		t.Fatalf("a rock breaks into one canto: err %v, %d → %d", err, cantos, p.Inv[world.ItemCanto])
 	}
 }
 

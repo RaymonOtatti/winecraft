@@ -12,6 +12,25 @@ const (
 	ItemFence
 	ItemStone
 	ItemCrate
+
+	// Raw materials from the west and east zones (PLAN.md §4.5)
+	ItemCanto
+	ItemArena
+	ItemAgua
+	ItemJarilla
+	ItemLimo
+	ItemPoste
+	ItemCana
+	ItemRollizo
+	ItemPaja
+
+	// Crafted building materials (traditional Mendoza construction)
+	ItemBarro
+	ItemBarroPaja
+	ItemAdobe
+	ItemCanizo
+	ItemQuincha
+	ItemTecho
 	numItems
 )
 
@@ -27,8 +46,25 @@ var items = [numItems]ItemInfo{
 	ItemGrapes: {ID: ItemGrapes, Name: "Racimo de uva"},
 	ItemPlanks: {ID: ItemPlanks, Name: "Tablones", Places: Planks},
 	ItemFence:  {ID: ItemFence, Name: "Cerca", Places: Fence},
-	ItemStone:  {ID: ItemStone, Name: "Piedra", Places: StoneWall},
+	ItemStone:  {ID: ItemStone, Name: "Cimiento de piedra", Places: StoneWall},
 	ItemCrate:  {ID: ItemCrate, Name: "Cajón", Places: Crate},
+
+	ItemCanto:   {ID: ItemCanto, Name: "Canto rodado"},
+	ItemArena:   {ID: ItemArena, Name: "Arena"},
+	ItemAgua:    {ID: ItemAgua, Name: "Agua de deshielo"},
+	ItemJarilla: {ID: ItemJarilla, Name: "Jarilla"},
+	ItemLimo:    {ID: ItemLimo, Name: "Limo"},
+	ItemPoste:   {ID: ItemPoste, Name: "Poste"},
+	ItemCana:    {ID: ItemCana, Name: "Caña"},
+	ItemRollizo: {ID: ItemRollizo, Name: "Rollizo de álamo"},
+	ItemPaja:    {ID: ItemPaja, Name: "Paja"},
+
+	ItemBarro:     {ID: ItemBarro, Name: "Barro"},
+	ItemBarroPaja: {ID: ItemBarroPaja, Name: "Barro con paja"},
+	ItemAdobe:     {ID: ItemAdobe, Name: "Adobe", Places: AdobeWall},
+	ItemCanizo:    {ID: ItemCanizo, Name: "Cañizo"},
+	ItemQuincha:   {ID: ItemQuincha, Name: "Quincha", Places: QuinchaWall},
+	ItemTecho:     {ID: ItemTecho, Name: "Techo de torta", Places: TortaRoof},
 }
 
 // ItemDef returns an item's description; unknown ids return the zero value.

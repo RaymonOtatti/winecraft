@@ -36,7 +36,8 @@ func TestGroundTilesAreOpaqueAndObjectsAreNot(t *testing.T) {
 				t.Errorf("ground tile %s has %d/%d opaque pixels; ground must cover its cell", world.Def(tid).Name, n, full)
 			}
 		case world.Object:
-			if tid != world.StoneWall && tid != world.Crate && n == full {
+			solid := map[world.TileID]bool{world.StoneWall: true, world.Crate: true, world.AdobeWall: true, world.QuinchaWall: true, world.TortaRoof: true}
+			if !solid[tid] && n == full {
 				t.Errorf("object %s covers its whole cell; it should let the ground show through", world.Def(tid).Name)
 			}
 		}

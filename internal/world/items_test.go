@@ -34,12 +34,15 @@ func TestBreakableTilesDropRealItems(t *testing.T) {
 		if !d.Breakable {
 			continue
 		}
-		if _, ok := ItemForTile(d.Drop); !ok {
+		if d.Drop == ItemNone || int(d.Drop) >= NumItems() {
 			t.Errorf("breaking %s drops %d, which is no item", d.Name, d.Drop)
 		}
+		if d.Placeable && d.Drop != func() ItemID { it, _ := ItemForTile(TileID(id)); return it }() {
+			t.Errorf("breaking a placed %s must give back the item that placed it", d.Name)
+		}
 	}
-	if it, _ := ItemForTile(Def(Rock).Drop); it != ItemStone {
-		t.Error("a rock breaks into stone")
+	if Def(Rock).Drop != ItemCanto {
+		t.Error("a rock breaks into a granite canto")
 	}
 }
 

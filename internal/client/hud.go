@@ -52,6 +52,16 @@ func HotbarLabel(h *Hotbar) string {
 	return DisplayName(world.ItemDef(h.Selected()).Name)
 }
 
+// ZoneNotice announces the zone you stepped into, or "" when you stayed in
+// it. The first zone you see is announced too, so the place names show up
+// right after joining and in zone snapshots.
+func ZoneNotice(from, to string) string {
+	if from == to {
+		return ""
+	}
+	return "Zona: " + to
+}
+
 // ToastFor is how long a notice stays on screen.
 const ToastFor = 3 * time.Second
 

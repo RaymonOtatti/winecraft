@@ -41,6 +41,7 @@ type Game struct {
 
 	toast      Toast
 	noticeSeen int
+	zone       string          // the zone we last announced (world.ZoneAt)
 	unjoined   int             // frames spent before joining (a rejected client still snapshots)
 	frameCost  []time.Duration // Update+Draw per frame, when benchmarking
 	updateCost time.Duration
@@ -184,6 +185,15 @@ func (g *Game) Update() error {
 		return nil
 	}
 	g.frame++ // counts frames since joining, so scripts and snapshots wait for the server
+
+	// Announce the zone we are in when it changes: the road leaves the
+	// valley in both directions, and the place names say where we arrived.
+	if z := world.ZoneAt(g.S.Me.Pos.X, g.S.Me.Pos.Y); z != g.zone {
+		if n := ZoneNotice(g.zone, z); n != "" {
+			g.toast.Show(n, time.Now())
+		}
+		g.zone = z
+	}
 
 	g.Input.Scripted = len(g.script) > 0
 	var st *scriptStep

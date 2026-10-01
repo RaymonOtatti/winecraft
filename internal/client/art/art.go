@@ -411,10 +411,15 @@ func Items() *image.RGBA {
 		}
 		if it == world.ItemGrapes {
 			paintBunch(c)
+		} else if paint, ok := itemPainters[it]; ok {
+			paint(c)
 		}
 	}
 	return img
 }
+
+// itemPainters draws items that build nothing (raw and crafted materials).
+var itemPainters = map[world.ItemID]func(*cell){}
 
 // paintBunch draws one hanging bunch of grapes with its stem and a leaf.
 func paintBunch(c *cell) {

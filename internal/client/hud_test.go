@@ -74,3 +74,19 @@ func TestHotbarLabelNamesTheSelectedItem(t *testing.T) {
 		t.Fatalf("label %q", got)
 	}
 }
+
+func TestZoneNoticeAnnouncesTheZoneYouStepInto(t *testing.T) {
+	cases := []struct{ from, to, want string }{
+		{"", world.ZoneValley, "Zona: " + world.ZoneValley},
+		{world.ZoneValley, world.ZoneValley, ""},
+		{world.ZoneValley, world.ZoneWest, "Zona: " + world.ZoneWest},
+		{world.ZoneValley, world.ZoneBadlands, "Zona: " + world.ZoneBadlands},
+		{world.ZoneBadlands, world.ZoneOasis, "Zona: " + world.ZoneOasis},
+		{world.ZoneOasis, world.ZoneValley, "Zona: " + world.ZoneValley},
+	}
+	for _, c := range cases {
+		if got := ZoneNotice(c.from, c.to); got != c.want {
+			t.Errorf("ZoneNotice(%q → %q) = %q, want %q", c.from, c.to, got, c.want)
+		}
+	}
+}
