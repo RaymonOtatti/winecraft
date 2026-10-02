@@ -88,9 +88,13 @@ func (s *Session) Apply(m proto.Msg) {
 		}
 	case *proto.Error:
 		s.NoticeSeq++
-		s.Notice = errorText[m.Code]
-		if s.Notice == "" {
-			s.Notice = "Error del servidor"
+		if m.Text != "" {
+			s.Notice = DisplayName(m.Text)
+		} else {
+			s.Notice = errorText[m.Code]
+			if s.Notice == "" {
+				s.Notice = "Error del servidor"
+			}
 		}
 	case *proto.Chat:
 		s.ChatSeq++

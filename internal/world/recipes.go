@@ -35,12 +35,30 @@ type Recipe struct {
 
 // CanCraft reports whether inv holds at least the required inputs.
 func (r Recipe) CanCraft(inv map[ItemID]int) bool {
+	return len(r.Missing(inv)) == 0
+}
+
+// Missing lists every input that inv does not have enough of.
+func (r Recipe) Missing(inv map[ItemID]int) []struct {
+	Item ItemID
+	Have int
+	Need int
+} {
+	var out []struct {
+		Item ItemID
+		Have int
+		Need int
+	}
 	for _, in := range r.Inputs {
 		if inv[in.Item] < in.Count {
-			return false
+			out = append(out, struct {
+				Item ItemID
+				Have int
+				Need int
+			}{in.Item, inv[in.Item], in.Count})
 		}
 	}
-	return true
+	return out
 }
 
 // Craft consumes the inputs and adds the outputs to inv.

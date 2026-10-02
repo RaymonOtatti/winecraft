@@ -17,7 +17,7 @@ func TestCraftConsumesAndProduces(t *testing.T) {
 	}
 	p.Inv = map[world.ItemID]int{world.ItemRollizo: 1}
 
-	if err := s.Craft(p.ID, world.RecipePlanks, time.Now()); err != nil {
+	if _, err := s.Craft(p.ID, world.RecipePlanks, time.Now()); err != nil {
 		t.Fatalf("craft planks: %v", err)
 	}
 	if p.Inv[world.ItemRollizo] != 0 {
@@ -35,7 +35,7 @@ func TestCraftNeedsMaterials(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Craft(p.ID, world.RecipePlanks, time.Now()); !errors.Is(err,ErrNoMaterial) {
+	if _, err := s.Craft(p.ID, world.RecipePlanks, time.Now()); !errors.Is(err, ErrNoMaterial) {
 		t.Fatalf("empty inventory craft: got %v, want ErrNoMaterial", err)
 	}
 }
@@ -47,7 +47,7 @@ func TestCraftUnknownRecipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Craft(p.ID, world.RecipeID(world.NumRecipes()), time.Now()); !errors.Is(err,ErrUnknownRecipe) {
+	if _, err := s.Craft(p.ID, world.RecipeID(world.NumRecipes()), time.Now()); !errors.Is(err, ErrUnknownRecipe) {
 		t.Fatalf("unknown recipe: got %v, want ErrUnknownRecipe", err)
 	}
 }
@@ -62,12 +62,11 @@ func TestCraftRateLimited(t *testing.T) {
 	p.Inv[world.ItemRollizo] = 100
 	now := time.Now()
 	for i := 0; i < CraftBurst; i++ {
-		if err := s.Craft(p.ID, world.RecipePlanks, now); err != nil {
+		if _, err := s.Craft(p.ID, world.RecipePlanks, now); err != nil {
 			t.Fatalf("burst craft %d: %v", i, err)
 		}
 	}
-	if err := s.Craft(p.ID, world.RecipePlanks, now); !errors.Is(err,ErrRateLimited) {
+	if _, err := s.Craft(p.ID, world.RecipePlanks, now); !errors.Is(err, ErrRateLimited) {
 		t.Fatalf("after burst: got %v, want ErrRateLimited", err)
 	}
 }
-

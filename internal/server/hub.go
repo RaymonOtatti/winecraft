@@ -6,7 +6,9 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -260,10 +262,16 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 			h.sendTo(c, &proto.Error{Code: proto.ErrNotAllowed})
 		}
 	case *proto.Craft:
-		if err := h.state.Craft(c.id, world.RecipeID(m.Recipe), time.Now()); err != nil {
+		missing, err := h.state.Craft(c.id, world.RecipeID(m.Recipe), time.Now())
+		if err != nil {
 			code := proto.ErrNotAllowed
 			if errors.Is(err, game.ErrNoMaterial) {
 				code = proto.ErrNoMaterial
+				// Send a detailed "missing X" notice when we can.
+				if len(missing) > 0 {
+					h.sendTo(c, &proto.Error{Code: code, Text: missingMaterialText(missing)})
+					break
+				}
 			} else if errors.Is(err, game.ErrRateLimited) {
 				code = proto.ErrRateLimited
 			}
@@ -290,6 +298,23 @@ func (h *Hub) reply(c *client, ch game.Change, err error) {
 
 func tileUpdate(ch game.Change) *proto.TileUpdate {
 	return &proto.TileUpdate{X: int32(ch.X), Y: int32(ch.Y), Layer: ch.Layer, Tile: ch.Tile}
+}
+
+// missingMaterialText builds a Spanish sentence listing each crafting shortfall.
+func missingMaterialText(missing []game.MissingMaterial) string {
+	var b strings.Builder
+	b.WriteString("Faltan: ")
+	for i, m := range missing {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		name := world.ItemDef(m.Item).Name
+		if name == "" {
+			name = "objeto desconocido"
+		}
+		b.WriteString(fmt.Sprintf("%s (tienes %d, necesitas %d)", name, m.Have, m.Need))
+	}
+	return b.String()
 }
 
 // flush runs the world clock (vines regrowing), then broadcasts every player
