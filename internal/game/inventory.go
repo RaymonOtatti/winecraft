@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"math/rand"
 	"slices"
 	"time"
 
@@ -69,10 +70,13 @@ func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 		s.give(p, def.Gather, def.GatherN)
 		return Change{X: x, Y: y, Layer: world.Object, Tile: def.Spent}, nil
 	}
-	// Fishing: facing water with a crafted rod gives a fish, water stays as is.
+	// Fishing: facing water with a crafted rod has a chance to catch a fish.
 	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && s.Map.World.At(world.Ground, x, y) == world.Water && p.Inv[world.ItemFishingRod] > 0 {
-		s.give(p, world.ItemFish, 1)
-		return Change{}, nil
+		if rand.Float64() < 0.6 {
+			s.give(p, world.ItemFish, 1)
+			return Change{Tag: "fish:success"}, nil
+		}
+		return Change{Tag: "fish:miss"}, nil
 	}
 	// Fermentation: use a barrel with grapes and yeast to make wine.
 	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && def.ID == world.Barrel && p.Inv[world.ItemGrapes] >= 6 && p.Inv[world.ItemYeast] >= 1 {

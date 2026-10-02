@@ -18,11 +18,13 @@ var (
 	ErrRateLimited = errors.New("too many edits")
 )
 
-// Change is one tile that changed, for broadcasting.
+// Change is one tile that changed, for broadcasting. Tag is an optional
+// out-of-band hint for non-tile events such as fishing success/miss.
 type Change struct {
 	X, Y  int
 	Layer world.Layer
 	Tile  world.TileID
+	Tag   string
 }
 
 // Edit places tile on layer at (x, y), or breaks what is there when tile is

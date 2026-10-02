@@ -252,13 +252,18 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 			h.reply(c, ch, err)
 			break
 		}
-		if ch != (game.Change{}) {
+		switch {
+		case ch.Tile != world.None || ch.Layer != 0:
 			h.reply(c, ch, err)
 			if chat := h.state.CheckQuestEdit(c.id, ch); chat != nil {
 				h.sendTo(c, chat)
 			}
-		} else {
-			// Fishing or fermentation: no tile changed, but the target matters.
+		case ch.Tag == "fish:success" || ch.Tag == "fish:miss":
+			if text := fishingResultText(ch.Tag); text != "" {
+				h.sendTo(c, &proto.Chat{Text: text})
+			}
+		case ch == (game.Change{}):
+			// Fermentation with no tile change: the target may matter for quests.
 			tile := h.state.Map.World.At(world.Object, int(m.X), int(m.Y))
 			if chat := h.state.CheckQuestInteract(c.id, tile); chat != nil {
 				h.sendTo(c, chat)
@@ -308,6 +313,18 @@ func (h *Hub) reply(c *client, ch game.Change, err error) {
 
 func tileUpdate(ch game.Change) *proto.TileUpdate {
 	return &proto.TileUpdate{X: int32(ch.X), Y: int32(ch.Y), Layer: ch.Layer, Tile: ch.Tile}
+}
+
+// fishingResultText translates the internal fishing tag into a short Spanish
+// notice. The client gets this as a Chat message.
+func fishingResultText(tag string) string {
+	switch tag {
+	case "fish:success":
+		return "¡Pesca con éxito! Has sacado un pez."
+	case "fish:miss":
+		return "Nada esta vez… sigue intentando."
+	}
+	return ""
 }
 
 // missingMaterialText builds a Spanish sentence listing each crafting shortfall.

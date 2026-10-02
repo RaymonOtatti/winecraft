@@ -160,11 +160,14 @@ func TestFishingOnWaterGivesFish(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fishing: %v", err)
 	}
-	if ch != (Change{}) {
+	if ch.Tile != world.None || ch.Layer != 0 || ch.X != 0 || ch.Y != 0 {
 		t.Fatalf("fishing must not change a tile, got %+v", ch)
 	}
-	if p.Inv[world.ItemFish] != 1 {
-		t.Fatalf("fish: %d, want 1", p.Inv[world.ItemFish])
+	if ch.Tag != "fish:success" && ch.Tag != "fish:miss" {
+		t.Fatalf("fishing must report a result, got tag %q", ch.Tag)
+	}
+	if ch.Tag == "fish:success" && p.Inv[world.ItemFish] != 1 {
+		t.Fatalf("successful fishing: fish: %d, want 1", p.Inv[world.ItemFish])
 	}
 }
 
