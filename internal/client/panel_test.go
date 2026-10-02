@@ -64,3 +64,24 @@ func TestEmptyBagPanelIsHarmless(t *testing.T) {
 		t.Fatal("nothing to assign from an empty bag")
 	}
 }
+
+func TestPanelWindowKeepsCursorVisible(t *testing.T) {
+	// With an 800 px screen we can fit (800-80)/18 = 40 visible rows.
+	start, visible := panelWindow(800, 50, 0)
+	if start != 0 || visible != 40 {
+		t.Fatalf("start=%d visible=%d, want 0,40 at top", start, visible)
+	}
+	start, visible = panelWindow(800, 50, 45)
+	if start != 10 || visible != 40 {
+		t.Fatalf("start=%d visible=%d, want 10,40 at bottom", start, visible)
+	}
+	start, visible = panelWindow(800, 50, 25)
+	if start != 5 || visible != 40 {
+		t.Fatalf("start=%d visible=%d, want 5,40 in middle", start, visible)
+	}
+	// Small lists are not windowed.
+	start, visible = panelWindow(800, 10, 5)
+	if start != 0 || visible != 10 {
+		t.Fatalf("start=%d visible=%d, want 0,10 for short list", start, visible)
+	}
+}

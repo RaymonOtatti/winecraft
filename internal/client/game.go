@@ -330,10 +330,14 @@ func (g *Game) updatePanel(b Buttons) {
 	if b.Down {
 		g.panel.Move(g.S, +1)
 	}
+	items := g.panel.Items(g.S)
+	cursor := g.panel.Cursor(g.S)
+	start, visible := panelWindow(g.h, len(items), cursor)
+	rows := panelRows(g.w, g.h, start, visible)
 	for _, t := range b.Taps {
-		for i, r := range panelRows(g.w, g.h, len(g.panel.Items(g.S))) {
+		for i, r := range rows {
 			if t.In(r) {
-				g.panel.Select(g.S, i)
+				g.panel.Select(g.S, start+i)
 			}
 		}
 	}
@@ -618,11 +622,23 @@ func (g *Game) drawMiniMapCached(screen *ebiten.Image) {
 }
 
 
-// panelRows lays out n inventory rows in a centred box.
-func panelRows(w, h, n int) []image.Rectangle {
+// panelWindow chooses which inventory rows are visible so the highlighted
+// row is always on screen. It returns the first visible row and the count.
+func panelWindow(h, n, cursor int) (start, visible int) {
+	const rowH = 18
+	visible = max(1, (h-80)/rowH)
+	if n <= visible {
+		return 0, n
+	}
+	start = max(0, min(cursor-visible/2, n-visible))
+	return start, visible
+}
+
+// panelRows lays out the visible inventory rows in a centred box.
+func panelRows(w, h, start, visible int) []image.Rectangle {
 	const rowH, width = 18, 168
-	top := max(48, (h-n*rowH)/2)
-	out := make([]image.Rectangle, n)
+	top := 48
+	out := make([]image.Rectangle, visible)
 	for i := range out {
 		x, y := (w-width)/2, top+i*rowH
 		out[i] = image.Rect(x, y, x+width, y+rowH)
@@ -632,7 +648,9 @@ func panelRows(w, h, n int) []image.Rectangle {
 
 func (g *Game) drawPanel(screen *ebiten.Image) {
 	items := g.panel.Items(g.S)
-	rows := panelRows(g.w, g.h, len(items))
+	cursor := g.panel.Cursor(g.S)
+	start, visible := panelWindow(g.h, len(items), cursor)
+	rows := panelRows(g.w, g.h, start, visible)
 	title := "Inventario: 1-4 pone en la barra, I cierra"
 	if len(items) == 0 {
 		title = "Inventario vacio (I cierra)"
@@ -644,9 +662,10 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	vector.FillRect(screen, float32(box.Min.X), float32(box.Min.Y), float32(box.Dx()), float32(box.Dy()), dim, false)
 	drawText(screen, title, (g.w-6*len(title))/2, 33)
 	var op ebiten.DrawImageOptions
-	for i, it := range items {
+	for i, it := range items[start : start+visible] {
 		r := rows[i]
-		if i == g.panel.Cursor(g.S) {
+		idx := start + i
+		if idx == cursor {
 			vector.StrokeRect(screen, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx())-1, float32(r.Dy())-1, 1, slotPick, false)
 		}
 		op.GeoM.Reset()
