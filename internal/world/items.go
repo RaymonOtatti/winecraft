@@ -35,6 +35,14 @@ const (
 	// Fishing
 	ItemFishingRod
 	ItemFish
+
+	// Winemaking story (B8)
+	ItemWorkbench
+	ItemCellar
+	ItemPress
+	ItemBarrel
+	ItemYeast
+	ItemWine
 	numItems
 )
 
@@ -71,6 +79,13 @@ var items = [numItems]ItemInfo{
 	ItemTecho:      {ID: ItemTecho, Name: "Techo de torta", Places: TortaRoof},
 	ItemFishingRod: {ID: ItemFishingRod, Name: "Caña de pescar"},
 	ItemFish:       {ID: ItemFish, Name: "Pez"},
+
+	ItemWorkbench: {ID: ItemWorkbench, Name: "Banco de trabajo", Places: Workbench},
+	ItemCellar:    {ID: ItemCellar, Name: "Bodega", Places: Cellar},
+	ItemPress:     {ID: ItemPress, Name: "Prensa", Places: Press},
+	ItemBarrel:    {ID: ItemBarrel, Name: "Barril", Places: Barrel},
+	ItemYeast:     {ID: ItemYeast, Name: "Levadura"},
+	ItemWine:      {ID: ItemWine, Name: "Vino"},
 }
 
 // ItemDef returns an item's description; unknown ids return the zero value.

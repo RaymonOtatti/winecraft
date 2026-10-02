@@ -162,6 +162,36 @@ func init() {
 			}
 			c.speckle(flower, 5) // straw in the mud
 		},
+		world.Workbench: func(c *cell) {
+			// a sturdy wooden workbench with a plank top
+			c.rect(2, 10, 14, 14, trunk)
+			c.rect(2, 9, 14, 10, woodBase)
+			c.rect(6, 4, 10, 9, trunk) // central support
+			c.outline()
+		},
+		world.Cellar: func(c *cell) {
+			// a low stone cellar entrance
+			c.rect(2, 4, 14, 14, granite)
+			c.rect(4, 6, 12, 12, graniteDark)
+			c.rect(6, 10, 10, 12, mudDark) // dark interior
+			c.rect(5, 4, 11, 5, granite)   // lintel
+			c.outline()
+		},
+		world.Press: func(c *cell) {
+			// a simple vertical wine press frame
+			c.rect(2, 10, 4, 14, trunk)  // left post
+			c.rect(12, 10, 14, 14, trunk) // right post
+			c.rect(2, 4, 14, 6, trunk)   // top beam
+			c.rect(5, 6, 11, 12, granite) // pressing basket
+			c.outline()
+		},
+		world.Barrel: func(c *cell) {
+			// a wooden barrel with hoops
+			blob(c, 8, 9, 6, 5, trunk, woodDark, woodBase)
+			c.rect(2, 7, 14, 8, woodDark) // hoop
+			c.rect(2, 11, 14, 12, woodDark)
+			c.outline()
+		},
 	} {
 		painters[id] = p
 	}
@@ -268,6 +298,43 @@ func init() {
 			c.set(4, 9, waterDeep)
 			c.set(13, 8, waterDeep)
 			c.set(13, 10, waterDeep)
+			c.outline()
+		},
+		world.ItemWorkbench: func(c *cell) {
+			c.rect(2, 8, 14, 13, trunk)
+			c.rect(2, 7, 14, 8, woodBase)
+			c.outline()
+		},
+		world.ItemCellar: func(c *cell) {
+			c.rect(3, 4, 13, 13, granite)
+			c.rect(5, 6, 11, 11, graniteDark)
+			c.rect(6, 9, 10, 11, mudDark)
+			c.outline()
+		},
+		world.ItemPress: func(c *cell) {
+			c.rect(3, 9, 5, 14, trunk)
+			c.rect(11, 9, 13, 14, trunk)
+			c.rect(3, 4, 13, 6, trunk)
+			c.rect(6, 6, 10, 11, granite)
+			c.outline()
+		},
+		world.ItemBarrel: func(c *cell) {
+			blob(c, 8, 9, 5, 4, trunk, woodDark, woodBase)
+			c.rect(3, 7, 13, 8, woodDark)
+			c.rect(3, 10, 13, 11, woodDark)
+			c.outline()
+		},
+		world.ItemYeast: func(c *cell) {
+			// a small linen bag of yeast
+			blob(c, 8, 9, 4, 4, siltLight, siltBase, siltDark)
+			c.rect(6, 4, 10, 6, siltBase) // tie
+			c.outline()
+		},
+		world.ItemWine: func(c *cell) {
+			// a wine bottle / jar
+			c.rect(6, 2, 10, 10, siltBase)
+			c.rect(7, 10, 9, 14, waterWave)
+			c.rect(7, 5, 9, 9, waterDeep)
 			c.outline()
 		},
 	} {

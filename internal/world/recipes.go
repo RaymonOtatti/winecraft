@@ -16,6 +16,10 @@ const (
 	RecipeQuincha                // Poste + Cañizo + Barro -> Quincha
 	RecipeTecho                  // Rollizo + Cañizo + Barro con paja -> Techo de torta
 	RecipeFishingRod             // Rollizo + Paja -> Caña de pescar
+	RecipeWorkbench              // Tablones -> Banco de trabajo
+	RecipeCellar                 // Cimientos -> Bodega
+	RecipePress                  // Tablones + Cimiento -> Prensa
+	RecipeBarrel                 // Tablones + Rollizo -> Barril
 	numRecipes
 )
 
@@ -122,6 +126,26 @@ var recipes = func() [numRecipes]Recipe {
 		ID: RecipeFishingRod, Name: "Caña de pescar",
 		Inputs:  []RecipeStack{{ItemRollizo, 1}, {ItemPaja, 1}},
 		Outputs: []RecipeStack{{ItemFishingRod, 1}},
+	}
+	r[RecipeWorkbench] = Recipe{
+		ID: RecipeWorkbench, Name: "Banco de trabajo",
+		Inputs:  []RecipeStack{{ItemPlanks, 4}},
+		Outputs: []RecipeStack{{ItemWorkbench, 1}},
+	}
+	r[RecipeCellar] = Recipe{
+		ID: RecipeCellar, Name: "Bodega",
+		Inputs:  []RecipeStack{{ItemStone, 2}},
+		Outputs: []RecipeStack{{ItemCellar, 1}},
+	}
+	r[RecipePress] = Recipe{
+		ID: RecipePress, Name: "Prensa",
+		Inputs:  []RecipeStack{{ItemPlanks, 2}, {ItemStone, 2}},
+		Outputs: []RecipeStack{{ItemPress, 1}},
+	}
+	r[RecipeBarrel] = Recipe{
+		ID: RecipeBarrel, Name: "Barril",
+		Inputs:  []RecipeStack{{ItemPlanks, 4}, {ItemRollizo, 2}},
+		Outputs: []RecipeStack{{ItemBarrel, 1}},
 	}
 	return r
 }()

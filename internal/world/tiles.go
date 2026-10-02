@@ -76,6 +76,12 @@ const (
 	QuinchaWall
 	TortaRoof
 
+	// Winemaking story structures (B8)
+	Workbench
+	Cellar
+	Press
+	Barrel
+
 	numTiles
 )
 
@@ -132,6 +138,11 @@ var defs = func() [numTiles]TileDef {
 		AdobeWall:   {ID: AdobeWall, Name: "Pared de adobe", Layer: Object, Breakable: true, Placeable: true, Drop: ItemAdobe},
 		QuinchaWall: {ID: QuinchaWall, Name: "Pared de quincha", Layer: Object, Breakable: true, Placeable: true, Drop: ItemQuincha},
 		TortaRoof:   {ID: TortaRoof, Name: "Techo de torta", Layer: Object, Breakable: true, Placeable: true, Drop: ItemTecho},
+
+		Workbench: {ID: Workbench, Name: "Banco de trabajo", Layer: Object, Breakable: true, Placeable: true, Drop: ItemWorkbench},
+		Cellar:    {ID: Cellar, Name: "Bodega", Layer: Object, Breakable: true, Placeable: true, Drop: ItemCellar},
+		Press:     {ID: Press, Name: "Prensa", Layer: Object, Breakable: true, Placeable: true, Drop: ItemPress},
+		Barrel:    {ID: Barrel, Name: "Barril", Layer: Object, Breakable: true, Placeable: true, Drop: ItemBarrel},
 	}
 	for _, g := range []struct {
 		id, spent       TileID
