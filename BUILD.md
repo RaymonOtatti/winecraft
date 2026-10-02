@@ -59,7 +59,7 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* the URL serves the game from outside (curl via the tunnel); WebSocket upgrade through the tunnel works; Ctrl-C leaves no processes behind.
 - [x] **B5.3** Self-test through the tunnel: two browser tabs using the public URL; both move, see each other, and see edits.
   *Verify:* server log + snapshots.
-- [ ] 🛑 **B5.4** Live test with Raymon. Franco sends him the link; I watch the server log.
+- [x] 🛑 **B5.4** Live test with Raymon. Franco sends him the link; I watch the server log.
 
 ## B6 — First loop seed
 - [x] **B6.1** Server-side inventory. Harvesting a vine tile **does not destroy it**: the vine goes to a "harvested" state and regrows on a timer. Sandbox materials can be gathered and placed.
