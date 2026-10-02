@@ -257,6 +257,12 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 			if chat := h.state.CheckQuestEdit(c.id, ch); chat != nil {
 				h.sendTo(c, chat)
 			}
+		} else {
+			// Fishing or fermentation: no tile changed, but the target matters.
+			tile := h.state.Map.World.At(world.Object, int(m.X), int(m.Y))
+			if chat := h.state.CheckQuestInteract(c.id, tile); chat != nil {
+				h.sendTo(c, chat)
+			}
 		}
 		if chat := h.state.CheckQuest(c.id); chat != nil {
 			h.sendTo(c, chat)

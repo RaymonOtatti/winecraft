@@ -20,8 +20,9 @@ var GrapesPerHarvest = world.Def(world.Vine).GatherN
 // StarterKit is what every new player carries. B7.7 reduced it to a
 // "first day" minimum until B8 writes the first story task and tunes it.
 var StarterKit = map[world.ItemID]int{
-	world.ItemPlanks: 5,
+	world.ItemPlanks: 2,
 	world.ItemFence:  5,
+	world.ItemYeast:  1,
 }
 
 var ErrNoMaterial = errors.New("not enough material")
@@ -71,6 +72,13 @@ func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 	// Fishing: facing water with a crafted rod gives a fish, water stays as is.
 	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && s.Map.World.At(world.Ground, x, y) == world.Water && p.Inv[world.ItemFishingRod] > 0 {
 		s.give(p, world.ItemFish, 1)
+		return Change{}, nil
+	}
+	// Fermentation: use a barrel with grapes and yeast to make wine.
+	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && def.ID == world.Barrel && p.Inv[world.ItemGrapes] >= 6 && p.Inv[world.ItemYeast] >= 1 {
+		p.Inv[world.ItemGrapes] -= 6
+		p.Inv[world.ItemYeast]--
+		s.give(p, world.ItemWine, 1)
 		return Change{}, nil
 	}
 	return Change{}, ErrNotAllowed

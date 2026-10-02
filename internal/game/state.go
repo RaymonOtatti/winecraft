@@ -193,15 +193,39 @@ func CleanName(name string) (string, error) {
 	return name, nil
 }
 
-// CheckQuest checks the player's quest progress and returns a Chat message if a new step is reached.
+// CheckQuest checks the player's quest progress after an inventory change.
+// It returns a Chat message when a step is reached.
 func (s *State) CheckQuest(id uint32) *proto.Chat {
 	p := s.players[id]
 	if p == nil {
 		return nil
 	}
-	if p.QuestStep == 0 && p.Inv[world.ItemGrapes] > 0 {
-		p.QuestStep = 1
-		return &proto.Chat{Text: "¡Has cosechado uvas! El primer paso de cualquier bodega es la viña. Ahora busca arena en el cauce del arroyo para preparar el banco de trabajo."}
+	switch p.QuestStep {
+	case 0:
+		if p.Inv[world.ItemGrapes] >= 6 {
+			p.QuestStep = 1
+			return &proto.Chat{Text: "¡Has cosechado seis racimos! El primer paso de cualquier bodega de Valle de Uco es la viña. Ahora busca arena en el cauce del arroyo para preparar el banco de trabajo."}
+		}
+	case 2:
+		if p.Inv[world.ItemPlanks] >= 4 {
+			p.QuestStep = 3
+			return &proto.Chat{Text: "¡Excelente! Las tablas son la base de cualquier estructura. Ahora construyamos un banco de trabajo en el valle."}
+		}
+	case 4:
+		if p.Inv[world.ItemStone] >= 2 {
+			p.QuestStep = 5
+			return &proto.Chat{Text: "Las paredes de piedra mantendrán tu bodega estable. Construye la bodega en el valle para proteger la cosecha."}
+		}
+	case 6:
+		if p.Inv[world.ItemPress] >= 1 {
+			p.QuestStep = 7
+			return &proto.Chat{Text: "La prensa es esencial para extraer el jugo. Colócala dentro de la bodega para iniciar la fermentación."}
+		}
+	case 8:
+		if p.Inv[world.ItemBarrel] >= 1 {
+			p.QuestStep = 9
+			return &proto.Chat{Text: "El barril permite que el jugo se convierta en vino. Colócalo en la bodega; ya llevas levadura en la bolsa."}
+		}
 	}
 	return nil
 }
@@ -212,10 +236,46 @@ func (s *State) CheckQuestEdit(id uint32, ch Change) *proto.Chat {
 	if p == nil {
 		return nil
 	}
-	// Step 1 → 2: gather sand from a river sand bank in the valley.
-	if p.QuestStep == 1 && ch.Tile == world.SandBankDug && ch.Layer == world.Object {
-		p.QuestStep = 2
-		return &proto.Chat{Text: "¡Bien hecho! Has recogido arena del río. Con ella podemos hacer el banco de trabajo."}
+	switch p.QuestStep {
+	case 1:
+		// Step 1 → 2: gather sand from a river sand bank in the valley.
+		if ch.Tile == world.SandBankDug && ch.Layer == world.Object {
+			p.QuestStep = 2
+			return &proto.Chat{Text: "¡Bien hecho! Has recogido arena del río. Con ella podemos hacer el banco de trabajo."}
+		}
+	case 3:
+		// Step 3 → 4: place a workbench.
+		if ch.Tile == world.Workbench && ch.Layer == world.Object {
+			p.QuestStep = 4
+			return &proto.Chat{Text: "¡El banco de trabajo está listo! Con él podrás ensamblar herramientas más complejas."}
+		}
+	case 5:
+		// Step 5 → 6: build a cellar.
+		if ch.Tile == world.Cellar && ch.Layer == world.Object {
+			p.QuestStep = 6
+			return &proto.Chat{Text: "¡Tu bodega está en pie! Ahora almacena tus uvas y prepáralas para el proceso de fermentación."}
+		}
+	case 7:
+		// Step 7 → 8: place the press.
+		if ch.Tile == world.Press && ch.Layer == world.Object {
+			p.QuestStep = 8
+			return &proto.Chat{Text: "¡La prensa está lista! Ahora vamos a fermentar el mosto."}
+		}
+	}
+	return nil
+}
+
+// CheckQuestInteract checks quest progress after a successful Interact that
+// does not change a tile (e.g. fishing, fermenting in a barrel).
+func (s *State) CheckQuestInteract(id uint32, tile world.TileID) *proto.Chat {
+	p := s.players[id]
+	if p == nil {
+		return nil
+	}
+	// Story completion: ferment in a placed barrel.
+	if p.QuestStep == 9 && tile == world.Barrel {
+		p.QuestStep = 10
+		return &proto.Chat{Text: "¡Felicidades! Has completado la primera fase de la elaboración del vino. Próximamente, aprenderás a embotellar y vender tu producción."}
 	}
 	return nil
 }
