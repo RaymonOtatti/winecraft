@@ -84,14 +84,14 @@ Nothing gets pushed to any remote until Franco says so.
   *Verify:* recipe tests (inputs consumed, output given, unknown recipe refused, server-side only); snapshot.
 
 ## B8 — Story, guide chat and map (Franco's item 8, in his order)
-- [ ] 🛑 **B8.0** Write `STORY.md`: premise, the mentor (a role, not a real person), **≥ 10 story tasks** that lead to building the **crafting bench**, then the bench's winemaking tools (store, press, filter, …), every fact sourced. **Franco reviews before any of it is built.**
+- [x] 🛑 **B8.0** Write `STORY.md`: premise, the mentor (a role, not a real person), **≥ 10 story tasks** that lead to building the **crafting bench**, then the bench's winemaking tools (store, press, filter, …), every fact sourced. **Franco reviewed and approved.**
 - [x] **B8.1** (a) Side chat panel with the primary instructions: the mentor's scripted messages for the current step.
 - [x] **B8.2** (b) Quest engine (server-side progress per player, saved) + **task 1**.
-- [ ] **B8.3** (c) **Task 2**.
+- [x] **B8.3** (c) **Task 2** (gather sand from a SandBank; STORY.md updated to match the live-play design).
 - [ ] 🛑 **B8.4** (d) Chat answered by an agent on the NAS, one context per player that knows their step, game-only rules, no tools, rate-limited, injection-safe. **Ask Franco before installing anything on the NAS.**
   **Research 2026-10-01 (PLAN §13, Appendix C.6):** Google Antigravity's CLI exists (`agy` 1.2.14, headless `-p --output-format json`), but its terms forbid using it "in connection with products not provided by us", and Google bans accounts for that, so a public game can't run on it. The Gemini API (paid tier) is the compliant Google route, but its terms forbid services "likely to be accessed by individuals under the age of 18", so it needs an 18+ gate. **Options for Franco at this gate:** (1) **local model on the NAS (Ollama)**: no third-party terms, nothing leaves home, weaker answers but enough for quest help with server-side quest context; (2) Gemini API, paid tier, behind an 18+ gate, minors get fixed hints; (3) agy anyway: breaks its terms, risks the account; not recommended. Whatever the backend: no tools, quest step from the server never the client, player text delimited, length caps, URL stripping, per-player quotas, fixed-hint fallback, safety filters on, a Spanish red-team test suite.
 - [x] **B8.5** (e) Discoverable map, top-right: fog of war that clears as you explore, saved per player.
-- [ ] **B8.6** (f) Tasks 3–10+, the crafting bench, and its first winemaking tools.
+- [x] **B8.6** (f) Tasks 3–10+: Workbench, Cellar, Press, Barrel tiles/items/recipes; quest engine advances through all 10 steps; barrel fermentation consumes grapes + yeast and yields wine.
 
 ## ✅ BASE gate (all must hold)
 - Two computers over the tunnel: both move, see each other, build in the sandbox, harvest, and edits sync.
@@ -140,3 +140,4 @@ Nothing gets pushed to any remote until Franco says so.
 - 2026-10-01 · live-play fix · explicit crafting errors: `world.Recipe.Missing`, `game.Craft` returns the shortfall, server sends `Error.Text`, client prefers it over the generic code; message like "Faltan: Rollizo de álamo (tienes 0, necesitas 1), Paja (tienes 0, necesitas 1)" · `go test -race ./...`, `go vet ./...`, `make fuzz` 30 s green
 - 2026-10-01 · live-play fix · inventory panel scrolls: `panelWindow` keeps the highlighted row visible, `panelRows` only lays out the rows that fit the screen, taps map back to the correct item; fixes the lower rows being drawn below the page bottom · `go test -race ./...`, `go vet ./...`, `make fuzz` 30 s green
 - 2026-10-01 · live-play feature · fishing: lakes in the west and east zones plus a crafted `ItemFishingRod` (Rollizo + Paja); pressing Use on water while carrying a rod gives one `ItemFish`; water tile unchanged, inventory flushes on the next tick · tests: client sends Interact on water only with rod, server gives fish and rejects without rod/water · `go test -race ./...`, `go vet ./...`, `make fuzz` 30 s green
+- 2026-10-01 · B8 story · full 10-step quest chain implemented after STORY.md approval: step 1 needs 6 grapes, step 2 gathers sand, steps 3-9 craft/place Workbench → Cellar → Press → Barrel, step 10 ferments grapes + yeast into wine; added tiles/items/recipes for Workbench, Cellar, Press, Barrel, plus Yeast and Wine; starter kit tuned to 2 planks + 5 fences + 1 yeast so it doesn't shortcut plank-crafting; `TestStoryQuestReachesWine` walks the full chain; `go test -race ./...`, `go vet ./...`, `make fuzz` 30 s green
