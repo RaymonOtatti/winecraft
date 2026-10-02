@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestQuestProgressionEdit(t *testing.T) {
+func TestQuestProgressionOnSandBankGather(t *testing.T) {
 	// Setup deterministic dev map
 	m := world.GenerateDevMap(0)
 	s := New(m)
@@ -16,17 +16,11 @@ func TestQuestProgressionEdit(t *testing.T) {
 	}
 	// Simulate that step 1 is already completed (grapes harvested)
 	p.QuestStep = 1
-	// Give player the required material to place a SandBank
-	s.give(p, world.ItemArena, 1)
-	// Choose a location adjacent to player's spawn (47,47) -> (48,47)
-	x, y := p.Pos.X+1, p.Pos.Y
-	// Perform the edit to place a SandBank on the Object layer
-	// Simulate a successful edit that placed a SandBank
-	ch := Change{X: x, Y: y, Layer: world.Object, Tile: world.SandBank}
-	// Verify quest progression after the edit
+	// Simulate a successful gather from a SandBank: it becomes SandBankDug.
+	ch := Change{X: p.Pos.X + 1, Y: p.Pos.Y, Layer: world.Object, Tile: world.SandBankDug}
 	chat := s.CheckQuestEdit(p.ID, ch)
 	if chat == nil {
-		t.Fatalf("Expected quest chat after building SandBank, got nil")
+		t.Fatalf("Expected quest chat after gathering sand, got nil")
 	}
 	if p.QuestStep != 2 {
 		t.Fatalf("QuestStep not updated, expected 2 got %d", p.QuestStep)

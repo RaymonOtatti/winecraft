@@ -59,3 +59,31 @@ func TestQuestStepSurvivesSave(t *testing.T) {
 		t.Fatalf("inventory not restored: %d", q.Inv[world.ItemGrapes])
 	}
 }
+
+func TestQuestAdvancesOnGatheringSandBank(t *testing.T) {
+	s, p := editor(t)
+	if _, err := s.Harvest(p.ID, 6, 5, t0); err != nil {
+		t.Fatalf("harvest grapes: %v", err)
+	}
+	s.CheckQuest(p.ID)
+	if p.QuestStep != 1 {
+		t.Fatalf("after grapes QuestStep = %d, want 1", p.QuestStep)
+	}
+
+	// Place a SandBank next to the player so we can gather from it.
+	s.Map.World.Set(6, 5, world.SandBank)
+	ch, err := s.Harvest(p.ID, 6, 5, t0)
+	if err != nil {
+		t.Fatalf("gather sand bank: %v", err)
+	}
+	if ch.Tile != world.SandBankDug {
+		t.Fatalf("sand bank spent state = %v, want SandBankDug", ch.Tile)
+	}
+	chat := s.CheckQuestEdit(p.ID, ch)
+	if chat == nil {
+		t.Fatal("gathering sand must advance quest to step 2")
+	}
+	if p.QuestStep != 2 {
+		t.Fatalf("QuestStep = %d, want 2", p.QuestStep)
+	}
+}

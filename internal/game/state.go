@@ -201,21 +201,21 @@ func (s *State) CheckQuest(id uint32) *proto.Chat {
 	}
 	if p.QuestStep == 0 && p.Inv[world.ItemGrapes] > 0 {
 		p.QuestStep = 1
-		return &proto.Chat{Text: "¡Has cosechado uvas! Ahora construye un banco."}
+		return &proto.Chat{Text: "¡Has cosechado uvas! El primer paso de cualquier bodega es la viña. Ahora busca arena en el cauce del arroyo para preparar el banco de trabajo."}
 	}
 	return nil
 }
 
-// CheckQuestEdit checks quest progress after a successful edit (e.g., building a sand bank).
+// CheckQuestEdit checks quest progress after a successful world change.
 func (s *State) CheckQuestEdit(id uint32, ch Change) *proto.Chat {
 	p := s.players[id]
 	if p == nil {
 		return nil
 	}
-	// After step 1 (grapes harvested), the next step is to build a sand bank.
-	if p.QuestStep == 1 && ch.Tile == world.SandBank && ch.Layer == world.Object {
+	// Step 1 → 2: gather sand from a river sand bank in the valley.
+	if p.QuestStep == 1 && ch.Tile == world.SandBankDug && ch.Layer == world.Object {
 		p.QuestStep = 2
-		return &proto.Chat{Text: "¡Has construido un banco de arena! Continúa la aventura."}
+		return &proto.Chat{Text: "¡Bien hecho! Has recogido arena del río. Con ella podemos hacer el banco de trabajo."}
 	}
 	return nil
 }
