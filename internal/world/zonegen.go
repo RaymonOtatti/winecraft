@@ -44,6 +44,20 @@ func genWest(w *World, rng *rand.Rand) {
 			w.Set(x+2, 73, SandBank)
 		}
 	}
+	// a glacial lake where the stream widens before the valley
+	lakeCX, lakeCY := glacier+8, 70
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -3; dx <= 3; dx++ {
+			if dx*dx+dy*dy > 13 {
+				continue
+			}
+			w.Set(lakeCX+dx, lakeCY+dy, Water)
+		}
+	}
+	// sand banks around the lake shore
+	for _, p := range []Point{{lakeCX - 4, lakeCY}, {lakeCX + 4, lakeCY + 1}, {lakeCX, lakeCY - 3}} {
+		w.Set(p.X, p.Y, SandBank)
+	}
 	// springs at the foot of the ice
 	for _, y := range []int{18, 34, 48, 58, 82} {
 		w.Set(glacier+1, y, Spring)
@@ -150,6 +164,18 @@ func genEast(w *World, rng *rand.Rand) {
 		}
 	}
 	w.Set(canal, crossRoadY, Bridge)
+	// a reservoir pond south-east of the canal, for fishing and irrigation
+	pondCX, pondCY := 154, 78
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -3; dx <= 3; dx++ {
+			if dx*dx+dy*dy > 13 {
+				continue
+			}
+			w.Set(pondCX+dx, pondCY+dy, Water)
+		}
+	}
+	// a tiny sand/clay bank on the pond edge
+	w.Set(pondCX-4, pondCY, SandBank)
 	for y := 1; y < devSize-1; y++ {
 		for x := oasisX0 + 4; x < eastX1-4; x++ {
 			if w.At(Object, x, y) == None && w.At(Ground, x, y) != Water && abs(y-crossRoadY) > 1 && rng.IntN(100) < 3 {
