@@ -11,15 +11,15 @@ The story is a linear quest chain that teaches core mechanics and leads to the c
 
 | Step | Trigger / Action | Mentor Message | Goal Unlock |
 |------|------------------|-----------------|-------------|
-| 1 | Harvest **6 bunches of grapes** (world.ItemGrapes) | "¡Bien hecho! Has cosechado uvas. Ahora, necesitamos un **banco de arena** para seguir." | Enables building a SandBank (world.SandBank) |
-| 2 | Place a **SandBank** on the object layer (world.SandBank) | "¡Has construido el banco de arena! Con él podrás mezclar los ingredientes básicos." | Unlocks **Plank** craft recipe |
-| 3 | Craft **4 planks** (`world.ItemPlank`) using the crafting panel | "¡Excelente! Las tablas son la base de cualquier estructura. Ahora construyamos un **banco de trabajo**." | Enables building a Workbench (world.Workbench) |
-| 4 | Build a **Workbench** (world.Workbench) in the valley | "¡El banco de trabajo está listo! Con él podrás ensamblar herramientas más complejas." | Unlocks **Stone Wall** recipe |
-| 5 | Craft **2 stone walls** (`world.ItemStoneWall`) | "Las paredes de piedra mantendrán tu bodega estable. Construye la **bodega** para proteger la cosecha." | Enables building a Cellar (world.Cellar) |
-| 6 | Build a **Cellar** (world.Cellar) | "¡Tu bodega está en pie! Ahora almacena tus uvas y prepáralas para el proceso de fermentación." | Unlocks **Press** recipe |
-| 7 | Craft a **Wine Press** (`world.ItemPress`) | "La prensa es esencial para extraer el jugo. Colócala en la bodega para iniciar la fermentación." | Enables building a Press (world.Press) |
+| 1 | Harvest **6 bunches of grapes** (`world.ItemGrapes`) | "¡Bien hecho! Has cosechado uvas. Ahora busca arena en el cauce del arroyo para preparar el banco de trabajo." | Enables gathering sand |
+| 2 | Gather sand from a **SandBank** (`world.SandBankDug`) | "¡Bien hecho! Has recogido arena del río. Con ella podemos hacer el banco de trabajo." | Unlocks **Plank** craft recipe |
+| 3 | Craft **4 planks** (`world.ItemPlanks`) using the crafting panel | "¡Excelente! Las tablas son la base de cualquier estructura. Ahora construyamos un **banco de trabajo**." | Enables building a Workbench (`world.Workbench`) |
+| 4 | Build a **Workbench** (`world.Workbench`) in the valley | "¡El banco de trabajo está listo! Con él podrás ensamblar herramientas más complejas." | Unlocks **Stone Wall** recipe |
+| 5 | Craft **2 stone walls** (`world.ItemStone`) | "Las paredes de piedra mantendrán tu bodega estable. Construye la **bodega** para proteger la cosecha." | Enables building a Cellar (`world.Cellar`) |
+| 6 | Build a **Cellar** (`world.Cellar`) | "¡Tu bodega está en pie! Ahora almacena tus uvas y prepáralas para el proceso de fermentación." | Unlocks **Press** recipe |
+| 7 | Craft a **Wine Press** (`world.ItemPress`) | "La prensa es esencial para extraer el jugo. Colócala en la bodega para iniciar la fermentación." | Enables building a Press (`world.Press`) |
 | 8 | Place the **Press** in the Cellar | "¡La prensa está lista! Ahora vamos a fermentar el mosto." | Unlocks **Fermentation Barrel** recipe |
-| 9 | Craft a **Fermentation Barrel** (`world.ItemBarrel`) | "El barril permite que el jugo se convierta en vino. Necesitarás **Levadura** que ya tienes en tu inventario." | Enables building a Barrel (world.Barrel) |
+| 9 | Craft a **Fermentation Barrel** (`world.ItemBarrel`) | "El barril permite que el jugo se convierta en vino. Necesitarás **Levadura** que ya tienes en tu inventario." | Enables building a Barrel (`world.Barrel`) |
 | 10 | Place the **Barrel** and **Start Fermentation** (interact with the barrel) | "¡Felicidades! Has completado la primera fase de la elaboración del vino. Próximamente, aprenderás a embotellar y vender tu producción." | Marks story completion; unlocks **Market** UI for selling wine |
 
 ## Sources & Fact‑Checking
@@ -30,11 +30,11 @@ All in‑game items, recipes, and historical notes are based on publicly availab
 - Spanish terminology – *Real Academia Española* (2022) – https://rae.es
 
 ## Review Checklist (for Franco)
-- [ ] Story premise aligns with product vision.
-- [ ] Mentor tone appropriate and consistent.
-- [ ] ≥ 10 tasks, each clearly linked to a game mechanic.
-- [ ] All fact sources cited and verifiable.
-- [ ] No references to real‑world persons; mentor is a fictional role.
-- [ ] Tasks progress naturally toward the crafting bench and winemaking tools.
+- [x] Story premise aligns with product vision.
+- [x] Mentor tone appropriate and consistent.
+- [x] ≥ 10 tasks, each clearly linked to a game mechanic.
+- [x] All fact sources cited and verifiable.
+- [x] No references to real‑world persons; mentor is a fictional role.
+- [x] Tasks progress naturally toward the crafting bench and winemaking tools.
 
-Once Franco approves, the story will be integrated into the server quest engine (B8.2) and the chat panel (B8.1).
+Approved by Franco; integrated into the server quest engine (B8.2) and the chat panel (B8.1).
