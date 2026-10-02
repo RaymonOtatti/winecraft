@@ -104,6 +104,9 @@ func (s *Session) Act(a Action, item world.ItemID) (proto.Msg, bool) {
 		if world.Def(s.World.At(world.Object, p.X, p.Y)).Gather != world.ItemNone {
 			return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
 		}
+		if s.Inv[world.ItemFishingRod] > 0 && s.World.At(world.Ground, p.X, p.Y) == world.Water {
+			return &proto.Interact{X: int32(p.X), Y: int32(p.Y)}, true
+		}
 		s.notify("No hay nada para usar acá")
 	case ActionBreak:
 		if !s.inZone(p) {

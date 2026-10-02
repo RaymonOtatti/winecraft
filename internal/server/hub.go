@@ -248,14 +248,18 @@ func (h *Hub) handle(c *client, m proto.Msg) {
 		}
 	case *proto.Interact:
 		ch, err := h.state.Harvest(c.id, int(m.X), int(m.Y), time.Now())
-		h.reply(c, ch, err)
-		if err == nil {
+		if err != nil {
+			h.reply(c, ch, err)
+			break
+		}
+		if ch != (game.Change{}) {
+			h.reply(c, ch, err)
 			if chat := h.state.CheckQuestEdit(c.id, ch); chat != nil {
 				h.sendTo(c, chat)
 			}
-			if chat := h.state.CheckQuest(c.id); chat != nil {
-				h.sendTo(c, chat)
-			}
+		}
+		if chat := h.state.CheckQuest(c.id); chat != nil {
+			h.sendTo(c, chat)
 		}
 	case *proto.Hotbar:
 		if h.state.SetHotbar(c.id, m.Slots) != nil {

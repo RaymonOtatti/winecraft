@@ -62,13 +62,18 @@ func (s *State) Harvest(id uint32, x, y int, now time.Time) (Change, error) {
 		return Change{}, ErrRateLimited
 	}
 	def := world.Def(s.Map.World.At(world.Object, x, y))
-	if manhattan(p.Pos, world.Point{X: x, Y: y}) != 1 || def.Gather == world.ItemNone || def.Spent == world.None {
-		return Change{}, ErrNotAllowed
+	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && def.Gather != world.ItemNone && def.Spent != world.None {
+		s.Map.World.Set(x, y, def.Spent)
+		s.regrow = append(s.regrow, regrowth{at: world.Point{X: x, Y: y}, when: now.Add(RegrowAfter)})
+		s.give(p, def.Gather, def.GatherN)
+		return Change{X: x, Y: y, Layer: world.Object, Tile: def.Spent}, nil
 	}
-	s.Map.World.Set(x, y, def.Spent)
-	s.regrow = append(s.regrow, regrowth{at: world.Point{X: x, Y: y}, when: now.Add(RegrowAfter)})
-	s.give(p, def.Gather, def.GatherN)
-	return Change{X: x, Y: y, Layer: world.Object, Tile: def.Spent}, nil
+	// Fishing: facing water with a crafted rod gives a fish, water stays as is.
+	if manhattan(p.Pos, world.Point{X: x, Y: y}) == 1 && s.Map.World.At(world.Ground, x, y) == world.Water && p.Inv[world.ItemFishingRod] > 0 {
+		s.give(p, world.ItemFish, 1)
+		return Change{}, nil
+	}
+	return Change{}, ErrNotAllowed
 }
 
 // Tick advances timed world changes (vines regrowing), clears fog of war

@@ -91,3 +91,27 @@ func TestCursorStateFollowsTheTarget(t *testing.T) {
 		t.Fatal("an occupied tile: the cursor must say not buildable")
 	}
 }
+
+func TestUseOnWaterFishesWhenHoldingRod(t *testing.T) {
+	s := builder(t)
+	s.Me.Facing = world.North
+	s.World.Set(5, 4, world.Water)
+	s.Apply(&proto.Inventory{Items: []proto.Item{{ID: world.ItemFishingRod, Count: 1}}})
+	m, ok := s.Act(ActionUse, world.ItemNone)
+	if !ok {
+		t.Fatal("fishing with a rod on water must send an Interact")
+	}
+	if _, isInteract := m.(*proto.Interact); !isInteract {
+		t.Fatalf("want Interact, got %T", m)
+	}
+}
+
+func TestUseOnWaterWithoutRodIsRefused(t *testing.T) {
+	s := builder(t)
+	s.Me.Facing = world.North
+	s.World.Set(5, 4, world.Water)
+	m, ok := s.Act(ActionUse, world.ItemNone)
+	if ok {
+		t.Fatalf("fishing without a rod must be refused, got %T", m)
+	}
+}

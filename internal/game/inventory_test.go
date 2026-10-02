@@ -150,3 +150,34 @@ func TestInventoryListIsSortedAndSkipsEmpty(t *testing.T) {
 		}
 	}
 }
+
+func TestFishingOnWaterGivesFish(t *testing.T) {
+	s, p := editor(t)
+	p.Facing = world.North
+	s.Map.World.Set(5, 4, world.Water)
+	p.Inv[world.ItemFishingRod] = 1
+	ch, err := s.Harvest(p.ID, 5, 4, t0)
+	if err != nil {
+		t.Fatalf("fishing: %v", err)
+	}
+	if ch != (Change{}) {
+		t.Fatalf("fishing must not change a tile, got %+v", ch)
+	}
+	if p.Inv[world.ItemFish] != 1 {
+		t.Fatalf("fish: %d, want 1", p.Inv[world.ItemFish])
+	}
+}
+
+func TestFishingNeedsRodAndWater(t *testing.T) {
+	s, p := editor(t)
+	p.Facing = world.North
+	s.Map.World.Set(5, 4, world.Water)
+	if _, err := s.Harvest(p.ID, 5, 4, t0); !errors.Is(err, ErrNotAllowed) {
+		t.Fatalf("fishing without rod: %v", err)
+	}
+	p.Inv[world.ItemFishingRod] = 1
+	s.Map.World.Set(5, 4, world.Grass)
+	if _, err := s.Harvest(p.ID, 5, 4, t0); !errors.Is(err, ErrNotAllowed) {
+		t.Fatalf("fishing on grass: %v", err)
+	}
+}
