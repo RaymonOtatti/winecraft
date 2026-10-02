@@ -247,6 +247,29 @@ func init() {
 			}
 			c.outline()
 		},
+		world.ItemFishingRod: func(c *cell) {
+			// A thin pole with a curved line and hook.
+			for y := 0; y < 14; y++ {
+				c.set(3, y, trunk)
+			}
+			c.set(4, 2, trunk)
+			c.set(5, 3, trunk)
+			c.set(6, 4, trunk)
+			c.set(6, 5, trunk)
+			c.set(6, 6, trunk)
+			c.set(5, 7, trunk)
+			c.set(4, 8, trunk)
+			c.set(3, 9, trunk)
+			c.outline()
+		},
+		world.ItemFish: func(c *cell) {
+			// A simple trout-like fish.
+			blob(c, 8, 9, 5, 2, waterWave, waterBase, waterDeep)
+			c.set(4, 9, waterDeep)
+			c.set(13, 8, waterDeep)
+			c.set(13, 10, waterDeep)
+			c.outline()
+		},
 	} {
 		itemPainters[id] = p
 	}

@@ -31,6 +31,10 @@ const (
 	ItemCanizo
 	ItemQuincha
 	ItemTecho
+
+	// Fishing
+	ItemFishingRod
+	ItemFish
 	numItems
 )
 
@@ -64,7 +68,9 @@ var items = [numItems]ItemInfo{
 	ItemAdobe:     {ID: ItemAdobe, Name: "Adobe", Places: AdobeWall},
 	ItemCanizo:    {ID: ItemCanizo, Name: "Cañizo"},
 	ItemQuincha:   {ID: ItemQuincha, Name: "Quincha", Places: QuinchaWall},
-	ItemTecho:     {ID: ItemTecho, Name: "Techo de torta", Places: TortaRoof},
+	ItemTecho:      {ID: ItemTecho, Name: "Techo de torta", Places: TortaRoof},
+	ItemFishingRod: {ID: ItemFishingRod, Name: "Caña de pescar"},
+	ItemFish:       {ID: ItemFish, Name: "Pez"},
 }
 
 // ItemDef returns an item's description; unknown ids return the zero value.

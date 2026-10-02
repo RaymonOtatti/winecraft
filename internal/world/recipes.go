@@ -15,6 +15,7 @@ const (
 	RecipeCanizo                 // Caña x3 -> Cañizo
 	RecipeQuincha                // Poste + Cañizo + Barro -> Quincha
 	RecipeTecho                  // Rollizo + Cañizo + Barro con paja -> Techo de torta
+	RecipeFishingRod             // Rollizo + Paja -> Caña de pescar
 	numRecipes
 )
 
@@ -98,6 +99,11 @@ var recipes = func() [numRecipes]Recipe {
 		ID: RecipeTecho, Name: "Techo de torta",
 		Inputs:  []RecipeStack{{ItemRollizo, 1}, {ItemCanizo, 1}, {ItemBarroPaja, 1}},
 		Outputs: []RecipeStack{{ItemTecho, 1}},
+	}
+	r[RecipeFishingRod] = Recipe{
+		ID: RecipeFishingRod, Name: "Caña de pescar",
+		Inputs:  []RecipeStack{{ItemRollizo, 1}, {ItemPaja, 1}},
+		Outputs: []RecipeStack{{ItemFishingRod, 1}},
 	}
 	return r
 }()
